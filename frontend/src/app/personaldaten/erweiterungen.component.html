@@ -1,0 +1,132 @@
+<h3>Ergänzende Personaldaten</h3>
+<p class="section-description">Mehrere Einträge je Bereich sind möglich. Pflichtfelder sind mit * gekennzeichnet. Datumsangaben können leer bleiben, wenn sie unbekannt sind.</p>
+@if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+@if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
+@if (!daten()) { <p role="status">{{ arbeitet() ? 'Ergänzungen werden geladen …' : 'Ergänzungen konnten nicht geladen werden.' }}</p><button class="button secondary" (click)="neuLaden()" [disabled]="arbeitet()">Ergänzungen erneut laden</button> }
+@if (fte(); as f) {
+  <section class="fte-karte" aria-labelledby="fte-titel">
+    <h3 id="fte-titel">Vollzeitäquivalent (FTE)</h3>
+    @if (f.wochenstundenBekannt) {
+      <p class="fte-wert">{{ f.wert | number:'1.2-4' }} FTE</p>
+      <p>{{ f.wochenstunden | number:'1.0-2' }} Mitarbeiter-Wochenstunden / {{ f.vollzeitWochenstunden | number:'1.0-2' }} Vollzeit-Wochenstunden</p>
+    } @else { <p>Für diesen Stichtag ist keine gesicherte Arbeitszeit bekannt. Ein FTE-Wert kann noch nicht berechnet werden.</p> }
+    <p class="section-description">Vertraglicher Beschäftigungsumfang zum {{ f.stichtag | date:'dd.MM.yyyy' }}. Arbeitszeitänderungen werden unter Organisation gepflegt.</p>
+    @if (istAdmin()) {
+      <details><summary>Vollzeitbasis der Firma ändern</summary>
+        <p>Diese Einstellung gilt für alle Mitarbeiter der aktuell ausgewählten Firma und verändert deren FTE-Berechnung.</p>
+        <form #basisForm="ngForm" class="basis-form" (ngSubmit)="basisSpeichern(basisForm)">
+          <label class="field">Vollzeit-Wochenstunden *<input name="vollzeitbasis" type="number" [(ngModel)]="basis" required min="0.01" max="168" step="0.01" [disabled]="arbeitet()"></label>
+          <button class="button secondary" type="submit" [disabled]="arbeitet()">Vollzeitbasis speichern</button>
+        </form>
+      </details>
+    } @else { <p class="section-description">Die Vollzeitbasis wird durch die Firmenadministration festgelegt.</p> }
+  </section>
+}
+@if (daten(); as d) {
+  <form #editor #editorForm="ngForm" (ngSubmit)="speichern(editorForm)">
+    <fieldset class="felder-rahmen" [disabled]="arbeitet()"><legend class="sr-only">Ergänzende Angaben bearbeiten</legend>
+      <details class="erweiterungs-bereich" data-bereich="kontakte">
+        <summary>Erweiterte Kommunikation <span>({{ d.kontakte.length }})</span></summary>
+        <p class="section-description">Kontakte für interne, geschäftliche und Notfall-Kommunikation. Bitte mindestens Telefon oder E-Mail angeben.</p>
+        @for (e of d.kontakte; track e; let i = $index) {
+          <fieldset class="erweiterungs-eintrag"><legend>Kontakt {{ i + 1 }}</legend>
+            <div class="erweiterungs-grid"><label class="field">Kontaktart *<select name="kontakte-{{ i }}-art" [(ngModel)]="e.art" required><option value="INTERN">Intern</option><option value="GESCHAEFTLICH">Geschäftlich</option><option value="NOTFALL">Notfall</option></select></label><label class="field">Kontaktperson / Bezeichnung *<input name="kontakte-{{ i }}-name" type="text" [(ngModel)]="e.name" maxlength="160" required ></label><label class="field">Beziehung / Funktion<input name="kontakte-{{ i }}-beziehung" type="text" [(ngModel)]="e.beziehung" maxlength="160"  ></label><label class="field">Telefon<input name="kontakte-{{ i }}-telefon" type="tel" [(ngModel)]="e.telefon" maxlength="80"  [required]="!e.email"></label><label class="field">E-Mail<input name="kontakte-{{ i }}-email" type="email" [(ngModel)]="e.email" maxlength="254"  email [required]="!e.telefon"></label><label class="field">Priorität (1 = zuerst) *<input name="kontakte-{{ i }}-prioritaet" type="number" [(ngModel)]="e.prioritaet" min="1" max="99" step="1" required ></label><label class="field">Hinweis<textarea name="kontakte-{{ i }}-hinweis" [(ngModel)]="e.hinweis" maxlength="1000" rows="2"></textarea></label></div>
+            <button type="button" class="button secondary compact" (click)="entfernen('kontakte', i)" [attr.aria-label]="'Kontakt ' + (i + 1) + ' entfernen'">Entfernen</button>
+          </fieldset>
+        } @empty { <p>Noch keine Einträge erfasst.</p> }
+        <button type="button" class="button secondary" (click)="hinzufuegen('kontakte')" [disabled]="d.kontakte.length >= 100">Kontakt hinzufügen</button>
+        @if (d.kontakte.length >= 100) { <p>Maximal 100 Einträge je Bereich.</p> }
+      </details>
+      <details class="erweiterungs-bereich" data-bereich="vollmachten">
+        <summary>Vollmachten <span>({{ d.vollmachten.length }})</span></summary>
+        <p class="section-description">Hier dokumentierte Vollmachten vergeben keine Zugriffsrechte in PEM Online.</p>
+        @for (e of d.vollmachten; track e; let i = $index) {
+          <fieldset class="erweiterungs-eintrag"><legend>Vollmacht {{ i + 1 }}</legend>
+            <div class="erweiterungs-grid"><label class="field">Bezeichnung der Vollmacht *<input name="vollmachten-{{ i }}-bezeichnung" type="text" [(ngModel)]="e.bezeichnung" maxlength="160" required ></label><label class="field">Erteilt durch<input name="vollmachten-{{ i }}-erteiltDurch" type="text" [(ngModel)]="e.erteiltDurch" maxlength="160"  ></label><label class="field">Umfang<textarea name="vollmachten-{{ i }}-umfang" [(ngModel)]="e.umfang" maxlength="1000" rows="2"></textarea></label><label class="field">Beginn<input name="vollmachten-{{ i }}-beginn" type="date" [ngModel]="e.beginn" (ngModelChange)="e.beginn = $event || null" min="0001-01-01" max="9999-12-31"   ></label><label class="field">Ende<input name="vollmachten-{{ i }}-ende" type="date" [ngModel]="e.ende" (ngModelChange)="e.ende = $event || null" min="0001-01-01" max="9999-12-31" [min]="e.beginn || '0001-01-01'"  ></label><label class="field">Hinweis<textarea name="vollmachten-{{ i }}-hinweis" [(ngModel)]="e.hinweis" maxlength="1000" rows="2"></textarea></label></div>
+            <button type="button" class="button secondary compact" (click)="entfernen('vollmachten', i)" [attr.aria-label]="'Vollmacht ' + (i + 1) + ' entfernen'">Entfernen</button>
+          </fieldset>
+        } @empty { <p>Noch keine Einträge erfasst.</p> }
+        <button type="button" class="button secondary" (click)="hinzufuegen('vollmachten')" [disabled]="d.vollmachten.length >= 100">Vollmacht hinzufügen</button>
+        @if (d.vollmachten.length >= 100) { <p>Maximal 100 Einträge je Bereich.</p> }
+      </details>
+      <details class="erweiterungs-bereich" data-bereich="kostentraeger">
+        <summary>Kostenträger <span>({{ d.kostentraeger.length }})</span></summary>
+        <p class="section-description">Zuordnung zu Projekten oder anderen Kostenträgern. Kostenstellen werden weiterhin unter Stammdaten gepflegt.</p>
+        @for (e of d.kostentraeger; track e; let i = $index) {
+          <fieldset class="erweiterungs-eintrag"><legend>Kostenträger {{ i + 1 }}</legend>
+            <div class="erweiterungs-grid"><label class="field">Kostenträgernummer *<input name="kostentraeger-{{ i }}-nummer" type="text" [(ngModel)]="e.nummer" maxlength="40" required ></label><label class="field">Bezeichnung des Kostenträgers *<input name="kostentraeger-{{ i }}-bezeichnung" type="text" [(ngModel)]="e.bezeichnung" maxlength="160" required ></label><label class="field">Beginn<input name="kostentraeger-{{ i }}-beginn" type="date" [ngModel]="e.beginn" (ngModelChange)="e.beginn = $event || null" min="0001-01-01" max="9999-12-31"   ></label><label class="field">Ende<input name="kostentraeger-{{ i }}-ende" type="date" [ngModel]="e.ende" (ngModelChange)="e.ende = $event || null" min="0001-01-01" max="9999-12-31" [min]="e.beginn || '0001-01-01'"  ></label><label class="field">Hinweis<textarea name="kostentraeger-{{ i }}-hinweis" [(ngModel)]="e.hinweis" maxlength="1000" rows="2"></textarea></label></div>
+            <button type="button" class="button secondary compact" (click)="entfernen('kostentraeger', i)" [attr.aria-label]="'Kostenträger ' + (i + 1) + ' entfernen'">Entfernen</button>
+          </fieldset>
+        } @empty { <p>Noch keine Einträge erfasst.</p> }
+        <button type="button" class="button secondary" (click)="hinzufuegen('kostentraeger')" [disabled]="d.kostentraeger.length >= 100">Kostenträger hinzufügen</button>
+        @if (d.kostentraeger.length >= 100) { <p>Maximal 100 Einträge je Bereich.</p> }
+      </details>
+      <details class="erweiterungs-bereich" data-bereich="beauftragungen">
+        <summary>Beauftragungen <span>({{ d.beauftragungen.length }})</span></summary>
+        <p class="section-description">Beispielsweise Datenschutz- oder Brandschutzbeauftragte mit Zuständigkeitsbereich und Zeitraum.</p>
+        @for (e of d.beauftragungen; track e; let i = $index) {
+          <fieldset class="erweiterungs-eintrag"><legend>Beauftragung {{ i + 1 }}</legend>
+            <div class="erweiterungs-grid"><label class="field">Aufgabe / Beauftragung *<input name="beauftragungen-{{ i }}-aufgabe" type="text" [(ngModel)]="e.aufgabe" maxlength="160" required ></label><label class="field">Zuständigkeitsbereich<input name="beauftragungen-{{ i }}-bereich" type="text" [(ngModel)]="e.bereich" maxlength="160"  ></label><label class="field">Bestellt durch<input name="beauftragungen-{{ i }}-bestelltDurch" type="text" [(ngModel)]="e.bestelltDurch" maxlength="160"  ></label><label class="field">Beginn<input name="beauftragungen-{{ i }}-beginn" type="date" [ngModel]="e.beginn" (ngModelChange)="e.beginn = $event || null" min="0001-01-01" max="9999-12-31"   ></label><label class="field">Ende<input name="beauftragungen-{{ i }}-ende" type="date" [ngModel]="e.ende" (ngModelChange)="e.ende = $event || null" min="0001-01-01" max="9999-12-31" [min]="e.beginn || '0001-01-01'"  ></label><label class="field">Hinweis<textarea name="beauftragungen-{{ i }}-hinweis" [(ngModel)]="e.hinweis" maxlength="1000" rows="2"></textarea></label></div>
+            <button type="button" class="button secondary compact" (click)="entfernen('beauftragungen', i)" [attr.aria-label]="'Beauftragung ' + (i + 1) + ' entfernen'">Entfernen</button>
+          </fieldset>
+        } @empty { <p>Noch keine Einträge erfasst.</p> }
+        <button type="button" class="button secondary" (click)="hinzufuegen('beauftragungen')" [disabled]="d.beauftragungen.length >= 100">Beauftragung hinzufügen</button>
+        @if (d.beauftragungen.length >= 100) { <p>Maximal 100 Einträge je Bereich.</p> }
+      </details>
+      <details class="erweiterungs-bereich" data-bereich="bildung">
+        <summary>Ausbildungs- und Bildungsdaten <span>({{ d.bildung.length }})</span></summary>
+        <p class="section-description">Schulbildung, Berufsausbildung und Hochschulbildung mit Abschluss und Zeitraum.</p><p><a routerLink="/ausbildung">Betriebliche Ausbildungspläne und Stationen öffnen</a></p>
+        @for (e of d.bildung; track e; let i = $index) {
+          <fieldset class="erweiterungs-eintrag"><legend>Bildungsabschnitt {{ i + 1 }}</legend>
+            <div class="erweiterungs-grid"><label class="field">Bildungsart *<select name="bildung-{{ i }}-art" [(ngModel)]="e.art" required><option value="SCHULE">Schulbildung</option><option value="BERUF">Berufsausbildung</option><option value="HOCHSCHULE">Hochschulbildung</option><option value="SONSTIGES">Sonstige Bildung</option></select></label><label class="field">Einrichtung *<input name="bildung-{{ i }}-einrichtung" type="text" [(ngModel)]="e.einrichtung" maxlength="160" required ></label><label class="field">Fachrichtung<input name="bildung-{{ i }}-fachrichtung" type="text" [(ngModel)]="e.fachrichtung" maxlength="160"  ></label><label class="field">Abschluss<input name="bildung-{{ i }}-abschluss" type="text" [(ngModel)]="e.abschluss" maxlength="160"  ></label><label class="field">Bildungsstatus *<select name="bildung-{{ i }}-status" [(ngModel)]="e.status" required><option value="GEPLANT">Geplant</option><option value="LAUFEND">Laufend</option><option value="ABGESCHLOSSEN">Abgeschlossen</option><option value="ABGEBROCHEN">Abgebrochen</option></select></label><label class="field">Beginn<input name="bildung-{{ i }}-beginn" type="date" [ngModel]="e.beginn" (ngModelChange)="e.beginn = $event || null" min="0001-01-01" max="9999-12-31"   ></label><label class="field">Ende<input name="bildung-{{ i }}-ende" type="date" [ngModel]="e.ende" (ngModelChange)="e.ende = $event || null" min="0001-01-01" max="9999-12-31" [min]="e.beginn || '0001-01-01'"  ></label><label class="field">Hinweis<textarea name="bildung-{{ i }}-hinweis" [(ngModel)]="e.hinweis" maxlength="1000" rows="2"></textarea></label></div>
+            <button type="button" class="button secondary compact" (click)="entfernen('bildung', i)" [attr.aria-label]="'Bildungsabschnitt ' + (i + 1) + ' entfernen'">Entfernen</button>
+          </fieldset>
+        } @empty { <p>Noch keine Einträge erfasst.</p> }
+        <button type="button" class="button secondary" (click)="hinzufuegen('bildung')" [disabled]="d.bildung.length >= 100">Bildungsabschnitt hinzufügen</button>
+        @if (d.bildung.length >= 100) { <p>Maximal 100 Einträge je Bereich.</p> }
+      </details>
+      <details class="erweiterungs-bereich" data-bereich="fortbildungen">
+        <summary>Betriebliche Fortbildungen <span>({{ d.fortbildungen.length }})</span></summary>
+        <p class="section-description">Kurse und Schulungen einschließlich Dauer, Nachweis und dessen Gültigkeit.</p><p><a routerLink="/kenntnisse">Kenntnisse und Qualifikationsnachweise öffnen</a></p>
+        @for (e of d.fortbildungen; track e; let i = $index) {
+          <fieldset class="erweiterungs-eintrag"><legend>Fortbildung {{ i + 1 }}</legend>
+            <div class="erweiterungs-grid"><label class="field">Titel der Fortbildung *<input name="fortbildungen-{{ i }}-titel" type="text" [(ngModel)]="e.titel" maxlength="160" required ></label><label class="field">Anbieter<input name="fortbildungen-{{ i }}-anbieter" type="text" [(ngModel)]="e.anbieter" maxlength="160"  ></label><label class="field">Fortbildungsstatus *<select name="fortbildungen-{{ i }}-status" [(ngModel)]="e.status" required><option value="GEPLANT">Geplant</option><option value="LAUFEND">Laufend</option><option value="ABGESCHLOSSEN">Abgeschlossen</option><option value="ABGEBROCHEN">Abgebrochen</option></select></label><label class="field">Dauer in Stunden<input name="fortbildungen-{{ i }}-dauerStunden" type="number" [(ngModel)]="e.dauerStunden" min="0" max="99999.99" step="0.01"  ></label><label class="field">Beginn<input name="fortbildungen-{{ i }}-beginn" type="date" [ngModel]="e.beginn" (ngModelChange)="e.beginn = $event || null" min="0001-01-01" max="9999-12-31"   ></label><label class="field">Ende<input name="fortbildungen-{{ i }}-ende" type="date" [ngModel]="e.ende" (ngModelChange)="e.ende = $event || null" min="0001-01-01" max="9999-12-31" [min]="e.beginn || '0001-01-01'"  ></label><label class="field">Nachweis / Abschluss<input name="fortbildungen-{{ i }}-nachweis" type="text" [(ngModel)]="e.nachweis" maxlength="240"  ></label><label class="field">Nachweis gültig bis<input name="fortbildungen-{{ i }}-gueltigBis" type="date" [ngModel]="e.gueltigBis" (ngModelChange)="e.gueltigBis = $event || null" min="0001-01-01" max="9999-12-31"   ></label><label class="field">Hinweis<textarea name="fortbildungen-{{ i }}-hinweis" [(ngModel)]="e.hinweis" maxlength="1000" rows="2"></textarea></label></div>
+            <button type="button" class="button secondary compact" (click)="entfernen('fortbildungen', i)" [attr.aria-label]="'Fortbildung ' + (i + 1) + ' entfernen'">Entfernen</button>
+          </fieldset>
+        } @empty { <p>Noch keine Einträge erfasst.</p> }
+        <button type="button" class="button secondary" (click)="hinzufuegen('fortbildungen')" [disabled]="d.fortbildungen.length >= 100">Fortbildung hinzufügen</button>
+        @if (d.fortbildungen.length >= 100) { <p>Maximal 100 Einträge je Bereich.</p> }
+      </details>
+      <details class="erweiterungs-bereich" data-bereich="dienstwagen">
+        <summary>Dienstwagen <span>({{ d.dienstwagen.length }})</span></summary>
+        <p class="section-description">Überlassungs- und Leasingdaten. Für eine beendete Nutzung das Enddatum setzen.</p>
+        @for (e of d.dienstwagen; track e; let i = $index) {
+          <fieldset class="erweiterungs-eintrag"><legend>Dienstwagen {{ i + 1 }}</legend>
+            <div class="erweiterungs-grid"><label class="field">Hersteller *<input name="dienstwagen-{{ i }}-hersteller" type="text" [(ngModel)]="e.hersteller" maxlength="160" required ></label><label class="field">Modell *<input name="dienstwagen-{{ i }}-modell" type="text" [(ngModel)]="e.modell" maxlength="160" required ></label><label class="field">Kennzeichen *<input name="dienstwagen-{{ i }}-kennung" type="text" [(ngModel)]="e.kennung" maxlength="80" required ></label><label class="field">Leasinganbieter<input name="dienstwagen-{{ i }}-leasinganbieter" type="text" [(ngModel)]="e.leasinganbieter" maxlength="160"  ></label><label class="field">Monatsrate in EUR<input name="dienstwagen-{{ i }}-monatsrate" type="number" [(ngModel)]="e.monatsrate" min="0" max="9999999.99" step="0.01"  ></label><label class="field">Beginn<input name="dienstwagen-{{ i }}-beginn" type="date" [ngModel]="e.beginn" (ngModelChange)="e.beginn = $event || null" min="0001-01-01" max="9999-12-31"   ></label><label class="field">Ende<input name="dienstwagen-{{ i }}-ende" type="date" [ngModel]="e.ende" (ngModelChange)="e.ende = $event || null" min="0001-01-01" max="9999-12-31" [min]="e.beginn || '0001-01-01'"  ></label><label class="field">Hinweis<textarea name="dienstwagen-{{ i }}-hinweis" [(ngModel)]="e.hinweis" maxlength="1000" rows="2"></textarea></label></div>
+            <button type="button" class="button secondary compact" (click)="entfernen('dienstwagen', i)" [attr.aria-label]="'Dienstwagen ' + (i + 1) + ' entfernen'">Entfernen</button>
+          </fieldset>
+        } @empty { <p>Noch keine Einträge erfasst.</p> }
+        <button type="button" class="button secondary" (click)="hinzufuegen('dienstwagen')" [disabled]="d.dienstwagen.length >= 100">Dienstwagen hinzufügen</button>
+        @if (d.dienstwagen.length >= 100) { <p>Maximal 100 Einträge je Bereich.</p> }
+      </details>
+      <details class="erweiterungs-bereich" data-bereich="dienstraeder">
+        <summary>Dienstfahrräder <span>({{ d.dienstraeder.length }})</span></summary>
+        <p class="section-description">Überlassungs- und Leasingdaten. Für eine beendete Nutzung das Enddatum setzen.</p>
+        @for (e of d.dienstraeder; track e; let i = $index) {
+          <fieldset class="erweiterungs-eintrag"><legend>Dienstfahrrad {{ i + 1 }}</legend>
+            <div class="erweiterungs-grid"><label class="field">Hersteller *<input name="dienstraeder-{{ i }}-hersteller" type="text" [(ngModel)]="e.hersteller" maxlength="160" required ></label><label class="field">Modell *<input name="dienstraeder-{{ i }}-modell" type="text" [(ngModel)]="e.modell" maxlength="160" required ></label><label class="field">Rahmennummer *<input name="dienstraeder-{{ i }}-kennung" type="text" [(ngModel)]="e.kennung" maxlength="80" required ></label><label class="field">Leasinganbieter<input name="dienstraeder-{{ i }}-leasinganbieter" type="text" [(ngModel)]="e.leasinganbieter" maxlength="160"  ></label><label class="field">Monatsrate in EUR<input name="dienstraeder-{{ i }}-monatsrate" type="number" [(ngModel)]="e.monatsrate" min="0" max="9999999.99" step="0.01"  ></label><label class="field">Beginn<input name="dienstraeder-{{ i }}-beginn" type="date" [ngModel]="e.beginn" (ngModelChange)="e.beginn = $event || null" min="0001-01-01" max="9999-12-31"   ></label><label class="field">Ende<input name="dienstraeder-{{ i }}-ende" type="date" [ngModel]="e.ende" (ngModelChange)="e.ende = $event || null" min="0001-01-01" max="9999-12-31" [min]="e.beginn || '0001-01-01'"  ></label><label class="field">Hinweis<textarea name="dienstraeder-{{ i }}-hinweis" [(ngModel)]="e.hinweis" maxlength="1000" rows="2"></textarea></label></div>
+            <button type="button" class="button secondary compact" (click)="entfernen('dienstraeder', i)" [attr.aria-label]="'Dienstfahrrad ' + (i + 1) + ' entfernen'">Entfernen</button>
+          </fieldset>
+        } @empty { <p>Noch keine Einträge erfasst.</p> }
+        <button type="button" class="button secondary" (click)="hinzufuegen('dienstraeder')" [disabled]="d.dienstraeder.length >= 100">Dienstfahrrad hinzufügen</button>
+        @if (d.dienstraeder.length >= 100) { <p>Maximal 100 Einträge je Bereich.</p> }
+      </details>
+    </fieldset>
+    <div class="erweiterungs-fuss">
+      <button type="submit" class="button primary" [disabled]="arbeitet()">{{ arbeitet() ? 'Wird gespeichert …' : 'Ergänzungen speichern' }}</button>
+      <button type="button" class="button secondary" (click)="neuLaden()" [disabled]="arbeitet()">Ergänzungen neu laden</button>
+      @if (geaendert()) { <span>Ungespeicherte Ergänzungen</span> }
+    </div>
+  </form>
+}
+

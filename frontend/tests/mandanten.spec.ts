@@ -19,30 +19,34 @@ test('Firmen anlegen, eindeutige Konten zuordnen und mit getrennten Daten und Ro
   const a = firmen.find((f: {name: string}) => f.name === 'Browser Firma Alpha').mandantenspeicherId;
   const b = firmen.find((f: {name: string}) => f.name === 'Browser Firma Beta').mandantenspeicherId;
   for (const [firma, id, nachname] of [['Alpha', a, 'NurAlpha'], ['Beta', b, 'NurBeta']] as const) {
-    await page.getByRole('button', { name: 'Firma wechseln', exact: true }).click();
+    await page.getByRole('button', { name: 'Firmen', exact: true }).click();
     await page.getByRole('button', { name: `Zu Browser Firma ${firma} wechseln`, exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Startübersicht', exact: true })).toBeVisible();
     expect((await request.post('/api/mitarbeiter', { headers: { 'X-Mandantenspeicher-ID': String(id) },
       data: { vorname: 'Test', nachname, eintrittsdatum: '2020-01-01', wochenstunden: 40 } })).status()).toBe(201);
     if (id === a) {
-      await page.getByRole('button', { name: 'Lokale Konten', exact: true }).click();
+      await page.getByRole('button', { name: 'Benutzer & Zugänge', exact: true }).click();
       await page.getByLabel('Kontoname', { exact: true }).fill('firmenbenutzer');
       await page.getByLabel('Passwort', { exact: true }).fill(passwort);
       await page.getByRole('button', { name: 'Konto anlegen', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Konto firmenbenutzer bearbeiten', exact: true })).toBeVisible();
     }
   }
-  await page.getByRole('button', { name: 'Lokale Konten', exact: true }).click();
+  await page.getByRole('button', { name: 'Benutzer & Zugänge', exact: true }).click();
   await page.getByLabel('Kontoname', { exact: true }).fill('firmenbenutzer');
   await page.getByLabel('Passwort', { exact: true }).fill(passwort);
   await page.getByRole('button', { name: 'Konto anlegen', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('bereits vergeben');
-  await page.getByRole('button', { name: 'Firmen verwalten', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Konto für Firmenzugang', exact: true }).selectOption('firmenbenutzer');
+  await page.getByRole('button', { name: 'Konto firmenbenutzer bearbeiten', exact: true }).click();
   await page.getByRole('combobox', { name: 'Firma für Zugang', exact: true }).selectOption({ label: `Browser Firma Beta (${b})` });
   await page.getByRole('combobox', { name: 'Rolle in dieser Firma', exact: true }).selectOption('PERSONAL');
   await page.getByRole('button', { name: 'Firmenzugang speichern', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Firmenzugang gespeichert');
+  await page.getByRole('button', { name: 'Zugang firmenbenutzer / Browser Firma Beta bearbeiten', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Rolle in dieser Firma', exact: true })).toHaveValue('PERSONAL');
+  await page.getByRole('combobox', { name: 'Firma für Zugang', exact: true }).selectOption({ label: `Browser Firma Alpha (${a})` });
+  await expect(page.getByRole('combobox', { name: 'Rolle in dieser Firma', exact: true })).toHaveValue('LESEN');
+  await page.getByRole('button', { name: 'Bearbeitung schließen', exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath('firmenverwaltung-desktop.png'), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -60,8 +64,8 @@ test('Firmen anlegen, eindeutige Konten zuordnen und mit getrennten Daten und Ro
     await expect(benutzer.locator('tbody')).toContainText('NurAlpha');
     await expect(benutzer.locator('tbody')).not.toContainText('NurBeta');
     await expect(benutzer.locator('#neu')).toBeHidden();
-    await expect(benutzer.getByRole('button', { name: 'Firmen verwalten', exact: true })).toHaveCount(0);
-    await benutzer.getByRole('button', { name: 'Firma wechseln', exact: true }).click();
+    await benutzer.getByRole('button', { name: 'Firmen', exact: true }).click();
+    await expect(benutzer.getByRole('link', { name: 'Verwaltung', exact: true })).toHaveCount(0);
     await benutzer.getByRole('button', { name: 'Zu Browser Firma Beta wechseln', exact: true }).click();
     await expect(benutzer.locator('.topbar')).toContainText('Browser Firma Beta');
     await benutzer.getByRole('button', { name: 'Teamübersicht', exact: true }).click();

@@ -6,7 +6,7 @@ import { OrganisationApiService } from '../organisation/organisation-api.service
 import { Organisation } from '../shared/model';
 import { EntwicklungApi, Entwurf, Profil, Planstelle, Kenntnis, Person, fehlertext, kategorieName } from './entwicklung-api.service';
 
-@Component({ selector: 'app-stellen', standalone: true, imports: [FormsModule, DecimalPipe], templateUrl: './stellen.component.html', styleUrl: './entwicklung.css' })
+@Component({ selector: 'app-stellen', standalone: true, imports: [FormsModule, DecimalPipe], templateUrl: './stellen.component.html', styleUrls: ['./entwicklung.css', './stellen.component.css'] })
 export class StellenComponent implements OnInit {
   private readonly api = inject(EntwicklungApi);
   private readonly orgApi = inject(OrganisationApiService);
@@ -14,6 +14,7 @@ export class StellenComponent implements OnInit {
   readonly personen = signal<Person[]>([]); readonly organisationen = signal<Organisation[]>([]);
   readonly fehler = signal(''); readonly meldung = signal(''); readonly arbeitet = signal(false);
   readonly kategorieName = kategorieName;
+  readonly detailProfil = signal<Profil | null>(null);
   profil: Entwurf<Profil> = this.leeresProfil(); stelle: Entwurf<Planstelle> = this.leereStelle();
   ngOnInit(): void { void this.ausfuehren(async () => { await this.laden(); }); }
   private leeresProfil(): Entwurf<Profil> { return { name: '', beschreibung: '', aufgaben: '', anforderungen: [] }; }
@@ -23,6 +24,7 @@ export class StellenComponent implements OnInit {
     this.profile.set(p); this.stellen.set(s); this.kenntnisse.set(k); this.personen.set(m); this.organisationen.set(o);
   }
   profilBearbeiten(p?: Profil): void { this.profil = p ? structuredClone(p) : this.leeresProfil(); }
+  profilAnzeigen(p: Profil, dialog: HTMLDialogElement): void { this.detailProfil.set(p); dialog.showModal(); }
   stelleBearbeiten(s?: Planstelle): void { this.stelle = s ? { ...s } : this.leereStelle(); }
   async profilSpeichern(): Promise<void> { await this.ausfuehren(async () => { await this.api.speichern<Profil>('profile', this.profil); this.profilBearbeiten(); await this.laden(); }, 'Stellenprofil gespeichert.'); }
   async stelleSpeichern(): Promise<void> { await this.ausfuehren(async () => { await this.api.speichern<Planstelle>('planstellen', this.stelle); this.stelleBearbeiten(); await this.laden(); }, 'Planstelle gespeichert.'); }

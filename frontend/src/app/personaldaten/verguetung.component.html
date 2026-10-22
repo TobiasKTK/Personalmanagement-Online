@@ -1,0 +1,21 @@
+<h3>Vergütungsentwicklung und Lohnarten</h3>
+<label class="field stichtag">Vergütung am Stichtag<input type="date" name="verguetungsstichtag" [(ngModel)]="stichtag" required></label>
+<div class="table-scroll"><table><caption class="sr-only">Gültige Vergütung nach Lohnart</caption><thead><tr><th>Lohnart</th><th>Betrag</th><th>Bezug</th><th>Gültig ab</th></tr></thead><tbody>
+  @for (v of aktuell(); track v.lohnart) { <tr><td>{{ v.lohnart }} · {{ v.bezeichnung }}</td><td>{{ v.betrag | number:'1.2-2' }} {{ v.waehrung }}</td><td>{{ basis(v.basis) }}</td><td>{{ v.gueltigAb | date:'dd.MM.yyyy' }}</td></tr> }
+  @empty { <tr><td colspan="4">Am gewählten Stichtag ist keine Vergütung hinterlegt.</td></tr> }
+</tbody></table></div>
+<p class="section-description">Eine neue Zeile mit derselben Lohnart bildet die nächste Vergütungsänderung ab. Einmalzahlungen erscheinen nur an ihrem Gültigkeitstag.</p>
+<fieldset [disabled]="disabled() || readonly()" class="akten-felder">
+  <legend>Alle Vergütungsstände</legend>
+  @for (v of eintraege(); track $index; let i = $index) {
+    <div class="akten-eintrag"><div class="akten-grid">
+      <label class="field">Gültig ab<input type="date" [name]="'verguetung-ab-' + i" [(ngModel)]="v.gueltigAb" required></label>
+      <label class="field">Lohnart<input [name]="'lohnart-' + i" [(ngModel)]="v.lohnart" maxlength="40" required></label>
+      <label class="field">Bezeichnung der Lohnart<input [name]="'lohnname-' + i" [(ngModel)]="v.bezeichnung" maxlength="120" required></label>
+      <label class="field">Betrag<input type="number" [name]="'betrag-' + i" [(ngModel)]="v.betrag" min="0" max="999999999.99" step="0.01" required></label>
+      <label class="field">Währung<input [name]="'waehrung-' + i" [(ngModel)]="v.waehrung" maxlength="3" pattern="[A-Za-z]{3}" required></label>
+      <label class="field">Bezugsbasis<select [name]="'basis-' + i" [(ngModel)]="v.basis">@for (b of basen; track b.id) { <option [value]="b.id">{{ b.name }}</option> }</select></label>
+    </div>@if (!readonly()) { <button class="button secondary compact" type="button" (click)="eintraege().splice(i, 1)">Vergütungsstand entfernen</button> }</div>
+  } @empty { <p>Noch keine Vergütungsstände erfasst.</p> }
+  @if (!readonly()) { <button class="button secondary" type="button" (click)="hinzufuegen()">Vergütungsstand hinzufügen</button> }
+</fieldset>

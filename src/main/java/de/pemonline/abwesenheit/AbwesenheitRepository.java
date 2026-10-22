@@ -42,7 +42,7 @@ public class AbwesenheitRepository {
                 .param("person", person).param("id", id).param("version", version).update() == 1;
     }
     public boolean ausserhalb(long id, LocalDate beginn, LocalDate ende) {
-        return jdbc.sql("SELECT COUNT(*) FROM (SELECT mitarbeiter_id, beginn, ende FROM abwesenheit UNION ALL SELECT mitarbeiter_id, beginn, ende FROM urlaubsantrag WHERE status = 'BEANTRAGT') WHERE mitarbeiter_id = :id AND (beginn < :beginn OR (:ende IS NOT NULL AND ende > :ende))")
+        return jdbc.sql("SELECT COUNT(*) FROM (SELECT mitarbeiter_id, beginn, ende FROM abwesenheit UNION ALL SELECT mitarbeiter_id, beginn, ende FROM urlaubsantrag WHERE status = 'BEANTRAGT') a WHERE mitarbeiter_id = :id AND (beginn < :beginn OR (:ende IS NOT NULL AND ende > :ende)) AND NOT EXISTS (SELECT 1 FROM beschaeftigungszeit b WHERE b.mitarbeiter_id = a.mitarbeiter_id AND a.beginn >= b.beginn AND a.ende <= b.ende)")
                 .param("id", id).param("beginn", beginn).param("ende", ende, Types.DATE).query(Long.class).single() > 0;
     }
     private JdbcClient.StatementSpec parameter(JdbcClient.StatementSpec sql, AbwesenheitEingabe e) {

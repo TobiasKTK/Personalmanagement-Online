@@ -5,14 +5,14 @@ import { SitzungService } from '../sitzung/sitzung.service';
 import { mitFehlern } from '../shared/api-fehler';
 interface Zugang { mandantenspeicherId: number; name: string; rolle: string; }
 @Component({ selector: 'app-mandanten', standalone: true, template: `
-<section class="team-panel administration"><h1>Firma auswählen</h1>
+<section class="team-panel administration"><h2>Firma auswählen</h2>
 <p>Ein Konto, getrennte Datenbestände. Ihre Rolle kann je Firma unterschiedlich sein.</p>
 @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
 <ul class="management-list">@for (m of mandanten(); track m.mandantenspeicherId) {
-  <li><div><strong>{{ m.name }}</strong><p>Mandantenspeicher-ID {{ m.mandantenspeicherId }} · {{ m.rolle }}</p></div>
+  <li [class.active-company]="m.mandantenspeicherId === sitzung()?.mandantenspeicherId"><div><strong>{{ m.name }}</strong><p>Mandantenspeicher-ID {{ m.mandantenspeicherId }} · {{ m.rolle }}</p></div>
   <button class="button secondary" [disabled]="arbeitet() || m.mandantenspeicherId === sitzung()?.mandantenspeicherId" (click)="wechseln(m)">
     {{ m.mandantenspeicherId === sitzung()?.mandantenspeicherId ? 'Aktive Firma' : 'Zu ' + m.name + ' wechseln' }}</button></li>
-} @empty { <li>Kein aktiver Firmenzugang vorhanden. Die Systemverwaltung kann Ihnen eine Firma zuordnen.</li> }</ul></section>` })
+} @empty { <li>Kein aktiver Firmenzugang vorhanden. Die Systemverwaltung kann Ihnen eine Firma zuordnen.</li> }</ul></section>`, styles: `.management-list li.active-company { background: var(--primary-soft); border-left: 3px solid var(--primary); padding-inline: var(--space-3); }` })
 export class MandantenComponent implements OnInit {
   private readonly http = inject(HttpClient);
   readonly sitzung = inject(SitzungService).sitzung;

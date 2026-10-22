@@ -2,29 +2,58 @@
   <h1>Teamkalender</h1>
   <p>Abwesenheiten im gesamten Team. Die Abteilungszuordnung gilt zum Monatsende. Für Details auf einen Namen klicken.</p>
   <form class="filter-grid" (ngSubmit)="laden(true)">
-    <label class="field">Monat<input type="month" name="monat" [(ngModel)]="monat" required min="0001-01" max="9999-12"></label>
-    <label class="field">Organisationseinheit<select name="organisation" [(ngModel)]="organisation"><option value="">Alle Organisationseinheiten</option>@for (o of organisationen(); track o.id) { <option [value]="o.id">{{ o.name }}</option> }</select></label>
-    <button class="button primary" [disabled]="laedt()">Kalender anzeigen</button>
+    <div class="field"><label for="kalender-monat">Monat</label><div class="monatsnavigation">
+      <button type="button" class="page-button" aria-label="Vorheriger Monat" title="Vorheriger Monat" [disabled]="laedt() || loescht() || !nachbarMonat(-1)" (click)="monatWechseln(-1)">←</button>
+      <input id="kalender-monat" type="month" name="monat" [(ngModel)]="monat" (ngModelChange)="auswahl.set(null)" [disabled]="loescht()" required min="0001-01" max="9999-12">
+      <button type="button" class="page-button" aria-label="Nächster Monat" title="Nächster Monat" [disabled]="laedt() || loescht() || !nachbarMonat(1)" (click)="monatWechseln(1)">→</button>
+    </div></div>
+    <label class="field">Organisationseinheit<select name="organisation" [(ngModel)]="organisation" (ngModelChange)="auswahl.set(null)" [disabled]="loescht()"><option value="">Alle Organisationseinheiten</option>@for (o of organisationen(); track o.id) { <option [value]="o.id">{{ o.name }}</option> }</select></label>
+    <button class="button primary" [disabled]="laedt() || loescht()">Kalender anzeigen</button>
   </form>
   @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
   @if (laedt()) { <p role="status">Kalender wird geladen …</p> }
   <p class="legende"><span class="URLAUB">U · Urlaub / ½ · halber Tag</span><span class="KRANKHEIT">K · Krankheit</span><span class="ELTERNZEIT">E · Elternzeit</span><span class="SONSTIGES">S · Sonstiges</span></p>
-  @if (daten(); as d) {
-    <div class="table-scroll" tabindex="0" aria-label="Monatsübersicht, horizontal scrollbar">
-      <table class="kalender"><caption>Abwesenheiten {{ d.beginn.slice(0, 7) }}</caption><thead><tr><th scope="col">
+  @if (darfSchreiben()) {
+    <p>Zum Löschen eine Abwesenheit anklicken. Dabei wird der gesamte Eintrag markiert, auch über Monatsgrenzen hinweg.</p>
+    @if (auswahl(); as markierung) {
+      <section class="kalender-auswahl" aria-label="Markierte Abwesenheit">
+        <p aria-live="polite"><strong>{{ markierung.person.name }} · {{ arten[markierung.abwesenheit.art] }}{{ markierung.abwesenheit.halberTag ? ' · ½ Tag' : '' }}</strong><br>
+          {{ markierung.abwesenheit.beginn | date:'dd.MM.yyyy' }} – {{ markierung.abwesenheit.ende | date:'dd.MM.yyyy' }} · Gesamter Eintrag markiert</p>
+        <div class="actions">
+          <button type="button" class="button secondary" [disabled]="loescht()" (click)="auswahlAufheben()">Auswahl aufheben</button>
+          <button type="button" class="button danger" [disabled]="loescht() || laedt()" (click)="loeschen()">{{ loescht() ? 'Wird gelöscht …' : 'Abwesenheit löschen' }}</button>
+        </div>
+      </section>
+    }
+  }
+    <div #monatsuebersicht class="table-scroll" tabindex="0" aria-label="Monatsübersicht, horizontal scrollbar" [attr.aria-busy]="laedt() || loescht()">
+      <table class="kalender"><caption>Abwesenheiten {{ daten()?.beginn?.slice(0, 7) }}</caption><thead><tr><th scope="col">
         <label class="field kalender-suche">Mitarbeiter
           <input type="search" name="suche" aria-label="Mitarbeiter suchen" placeholder="Name oder Personalnummer" maxlength="120" autocomplete="off"
-            [ngModel]="suche" (ngModelChange)="suchen($event)" (keydown.enter)="$event.preventDefault(); laden(true)">
+            [ngModel]="suche" (ngModelChange)="suchen($event)" [disabled]="loescht()" (keydown.enter)="$event.preventDefault(); laden(true)">
         </label>
       </th>@for (tag of tage(); track tag) { <th scope="col" [class.wochenende]="wochenende(tag)">{{ tag.slice(8) }}</th> }</tr></thead>
-        <tbody>@for (p of d.eintraege; track p.id) {
-          <tr><th scope="row"><button class="personen-link" (click)="oeffnen(p.id)">{{ p.name }}</button><small>{{ p.organisationseinheit || 'Ohne Zuordnung' }}{{ p.historieBekannt ? '' : ' · historischer Stand unbekannt' }}</small></th>
-            @for (tag of tage(); track tag) { <td [class]="art(p, tag)" [class.wochenende]="wochenende(tag)" [attr.aria-label]="tag + ': ' + (halb(p, tag) ? 'Halber Urlaubstag' : (arten[art(p, tag)] || 'Keine Abwesenheit'))" [title]="halb(p, tag) ? 'Halber Urlaubstag' : (arten[art(p, tag)] || '')">{{ halb(p, tag) ? '½' : (art(p, tag).slice(0, 1) || '·') }}</td> }
+        <tbody>@if (daten(); as d) { @for (p of d.eintraege; track p.id) {
+          <tr><th scope="row"><button class="personen-link" [disabled]="loescht()" (click)="oeffnen(p.id)">{{ p.name }}</button><small>{{ p.organisationseinheit || 'Ohne Zuordnung' }}{{ p.historieBekannt ? '' : ' · historischer Stand unbekannt' }}</small></th>
+            @for (tag of tage(); track tag) {
+              @let a = abwesenheit(p, tag);
+              <td [class]="a?.art || ''" [class.wochenende]="wochenende(tag)" [class.markiert]="a && markiert(p, a)"
+                [attr.aria-label]="tag + ': ' + (a ? (a.halberTag ? 'Halber Urlaubstag' : arten[a.art]) : 'Keine Abwesenheit')"
+                [title]="a ? (a.halberTag ? 'Halber Urlaubstag' : arten[a.art]) : ''">
+                @if (a && darfSchreiben()) {
+                  <button type="button" class="abwesenheit-tag" [attr.aria-pressed]="markiert(p, a)" [disabled]="laedt() || loescht()"
+                    [attr.aria-label]="p.name + ': ' + (a.halberTag ? 'Halber Urlaubstag' : arten[a.art]) + ' am ' + datum(tag)" (click)="markieren(p, a)">{{ a.halberTag ? '½' : a.art.slice(0, 1) }}</button>
+                } @else { {{ a ? (a.halberTag ? '½' : a.art.slice(0, 1)) : '·' }} }
+              </td>
+            }
           </tr>
-        } @empty { <tr><td [attr.colspan]="tage().length + 1">Keine Mitarbeiter für diese Auswahl.</td></tr> }</tbody>
+        } @empty { <tr><td [attr.colspan]="tage().length + 1">Keine Mitarbeiter für diese Auswahl.</td></tr> }
+        } @else if (!laedt()) { <tr><td>Keine Kalenderdaten geladen.</td></tr> }</tbody>
       </table>
     </div>
-    <div class="pagination"><span>{{ d.gesamt }} Mitarbeiter · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Kalenderseite" [disabled]="seite === 0 || laedt()" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Kalenderseite" [disabled]="(seite + 1) * 20 >= d.gesamt || laedt()" (click)="seite = seite + 1; laden()">→</button></div></div>
+  @if (daten(); as d) {
+    <div class="pagination"><span>{{ d.gesamt }} Mitarbeiter · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Kalenderseite" [disabled]="seite === 0 || laedt() || loescht()" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Kalenderseite" [disabled]="(seite + 1) * 20 >= d.gesamt || laedt() || loescht()" (click)="seite = seite + 1; laden()">→</button></div></div>
   }
 </section>
-@if (details(); as person) { <app-mitarbeiter-details [person]="person" [darfSchreiben]="sitzung()?.rolle !== 'LESEN'" (geschlossen)="details.set(null); laden()" /> }
+@if (details(); as person) { <app-mitarbeiter-details [person]="person" [darfSchreiben]="darfSchreiben()" (geschlossen)="details.set(null); laden()" /> }

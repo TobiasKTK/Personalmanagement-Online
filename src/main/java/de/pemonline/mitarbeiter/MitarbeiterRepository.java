@@ -9,6 +9,13 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class MitarbeiterRepository {
+    private static final String BESCHAEFTIGUNG = """
+        CASE WHEN (m.eintrittsdatum <= :stichtag AND (m.austrittsdatum IS NULL OR m.austrittsdatum >= :stichtag))
+                  OR EXISTS (SELECT 1 FROM beschaeftigungszeit b WHERE b.mitarbeiter_id = m.id AND b.beginn <= :stichtag AND b.ende >= :stichtag)
+             THEN 'AKTIV'
+             WHEN m.austrittsdatum < :stichtag OR EXISTS (SELECT 1 FROM beschaeftigungszeit b WHERE b.mitarbeiter_id = m.id AND b.ende < :stichtag)
+             THEN 'AUSGESCHIEDEN' ELSE 'KUENFTIG' END
+        """;
     private static final java.util.Map<String, String> SORTIERUNG = java.util.Map.of(
             "nachname", "LOWER(m.nachname)", "personalnummer", "m.personalnummer",
             "eintrittsdatum", "m.eintrittsdatum", "wochenstunden", "COALESCE(h.wochenstunden, m.wochenstunden)",
@@ -18,28 +25,26 @@ public class MitarbeiterRepository {
                 m.titel, m.geburtsname, m.kuerzel, o.name, m.stelle,
                 m.beschaeftigungsart))) > 0
             AND (:organisation IS NULL OR CASE WHEN h.id IS NULL THEN m.organisationseinheit_id ELSE h.organisationseinheit_id END = :organisation)
-            AND (:beschaeftigung = 'ALLE'
-              OR (:beschaeftigung = 'KUENFTIG' AND m.eintrittsdatum > :stichtag)
-              OR (:beschaeftigung = 'AKTIV' AND m.eintrittsdatum <= :stichtag AND (m.austrittsdatum IS NULL OR m.austrittsdatum >= :stichtag))
-              OR (:beschaeftigung = 'AUSGESCHIEDEN' AND m.austrittsdatum < :stichtag))
+            AND (:beschaeftigung = 'ALLE' OR m.beschaeftigung = :beschaeftigung)
             """;
-    private static final String FROM = """
-        FROM mitarbeiter m LEFT JOIN mitarbeiter_historie h ON h.mitarbeiter_id = m.id
+    private static final String FROM = "FROM (SELECT m.*, " + BESCHAEFTIGUNG + " AS beschaeftigung FROM mitarbeiter m) m " + """
+        LEFT JOIN beschaeftigungszeit b ON b.mitarbeiter_id = m.id AND b.beginn <= :stichtag AND b.ende >= :stichtag
+        LEFT JOIN mitarbeiter_historie h ON h.mitarbeiter_id = m.id
           AND h.gueltig_ab = COALESCE((SELECT MAX(h2.gueltig_ab) FROM mitarbeiter_historie h2 WHERE h2.mitarbeiter_id = m.id AND h2.gueltig_ab <= :stichtag),
                                      (SELECT MIN(h3.gueltig_ab) FROM mitarbeiter_historie h3 WHERE h3.mitarbeiter_id = m.id))
         LEFT JOIN organisationseinheit o ON o.id = CASE WHEN h.id IS NULL THEN m.organisationseinheit_id ELSE h.organisationseinheit_id END
         """;
     private static final String SELECT = """
             SELECT m.id, m.name, COALESCE(h.wochenstunden, m.wochenstunden) AS wochenstunden,
-            m.eintrittsdatum, m.version, m.personalnummer, m.titel, m.nachname, m.vorname, m.geburtsname, m.kuerzel,
-            m.geburtsdatum, m.austrittsdatum, m.stelle, m.beschaeftigungsart,
+            CASE WHEN :historisch THEN COALESCE(b.beginn, m.eintrittsdatum) ELSE m.eintrittsdatum END AS eintrittsdatum,
+            m.version, m.personalnummer, m.titel, m.nachname, m.vorname, m.geburtsname, m.kuerzel,
+            m.geburtsdatum, CASE WHEN :historisch THEN COALESCE(b.ende, m.austrittsdatum) ELSE m.austrittsdatum END AS austrittsdatum, m.stelle, m.beschaeftigungsart,
             CASE WHEN h.id IS NULL THEN m.organisationseinheit_id ELSE h.organisationseinheit_id END AS organisationseinheit_id,
             COALESCE(o.name, '') AS organisationseinheit,
             CASE WHEN h.gueltig_ab <= :stichtag OR (m.eintrittsdatum > :stichtag AND h.gueltig_ab = m.eintrittsdatum) THEN TRUE ELSE FALSE END AS historie_bekannt,
             h.gueltig_ab AS daten_gueltig_ab,
             m.beschaeftigungsstatus AS alt_beschaeftigungsstatus, m.abwesenheitsstatus AS alt_abwesenheitsstatus,
-            CASE WHEN m.eintrittsdatum > :stichtag THEN 'KUENFTIG'
-                 WHEN m.austrittsdatum < :stichtag THEN 'AUSGESCHIEDEN' ELSE 'AKTIV' END AS beschaeftigung,
+            m.beschaeftigung,
             COALESCE((SELECT a.art FROM abwesenheit a
                 WHERE a.mitarbeiter_id = m.id AND a.beginn <= :stichtag AND a.ende >= :stichtag
                 ORDER BY a.id FETCH FIRST 1 ROW ONLY), '') AS abwesenheit_am_stichtag,
@@ -51,9 +56,19 @@ public class MitarbeiterRepository {
         this.jdbc = jdbc;
     }
 
+    public boolean fruehereBeschaeftigungUeberlappt(long id, java.time.LocalDate eintritt) {
+        return jdbc.sql("SELECT COUNT(*) FROM beschaeftigungszeit WHERE mitarbeiter_id = :id AND ende >= :eintritt")
+                .param("id", id).param("eintritt", eintritt).query(Long.class).single() > 0;
+    }
+
+    public boolean fruehereBeschaeftigungEnthaelt(long id, java.time.LocalDate beginn, java.time.LocalDate ende) {
+        return jdbc.sql("SELECT COUNT(*) FROM beschaeftigungszeit WHERE mitarbeiter_id = :id AND beginn <= :beginn AND ende >= :ende")
+                .param("id", id).param("beginn", beginn).param("ende", ende).query(Long.class).single() > 0;
+    }
+
     public List<Mitarbeiter> suchen(MitarbeiterFilter filter, int seite, int groesse) {
         return filter(jdbc.sql(SELECT + FROM + SUCHBEDINGUNG + " ORDER BY " + sortierung(filter) + " LIMIT :limit OFFSET :offset"), filter)
-                .param("limit", groesse).param("offset", (long) seite * groesse)
+                .param("limit", groesse).param("offset", (long) seite * groesse).param("historisch", true)
                 .query(Mitarbeiter.class).list();
     }
 
@@ -63,7 +78,7 @@ public class MitarbeiterRepository {
 
     public Optional<Mitarbeiter> finden(long id, java.time.LocalDate stichtag) {
         return jdbc.sql(SELECT + FROM + " WHERE m.id = :id")
-                .param("id", id).param("stichtag", stichtag).query(Mitarbeiter.class).optional();
+                .param("id", id).param("stichtag", stichtag).param("historisch", false).query(Mitarbeiter.class).optional();
     }
 
     public long naechstePersonalnummer(boolean sperren) {
@@ -127,9 +142,9 @@ public class MitarbeiterRepository {
         return filter(jdbc.sql("""
                 SELECT COUNT(*) AS anzahl, COALESCE(SUM(CASE WHEN h.gueltig_ab <= :stichtag OR (m.eintrittsdatum > :stichtag AND h.gueltig_ab = m.eintrittsdatum) THEN COALESCE(h.wochenstunden, m.wochenstunden) ELSE 0 END), 0) AS wochenstunden,
                 COUNT(CASE WHEN h.id IS NULL OR (h.gueltig_ab > :stichtag AND NOT (m.eintrittsdatum > :stichtag AND h.gueltig_ab = m.eintrittsdatum)) THEN 1 END) AS historie_unbekannt,
-                COUNT(CASE WHEN m.eintrittsdatum > :stichtag THEN 1 END) AS bevorstehende_eintritte,
-                COUNT(CASE WHEN m.eintrittsdatum <= :stichtag AND (m.austrittsdatum IS NULL OR m.austrittsdatum >= :stichtag) THEN 1 END) AS aktiv,
-                COUNT(CASE WHEN m.austrittsdatum < :stichtag THEN 1 END) AS ausgeschieden,
+                COUNT(CASE WHEN m.beschaeftigung = 'KUENFTIG' THEN 1 END) AS bevorstehende_eintritte,
+                COUNT(CASE WHEN m.beschaeftigung = 'AKTIV' THEN 1 END) AS aktiv,
+                COUNT(CASE WHEN m.beschaeftigung = 'AUSGESCHIEDEN' THEN 1 END) AS ausgeschieden,
                 CAST(:stichtag AS DATE) AS stichtag
                 """ + FROM + SUCHBEDINGUNG), filter).query(Statistik.class).single();
     }

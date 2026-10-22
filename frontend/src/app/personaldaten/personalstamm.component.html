@@ -1,0 +1,53 @@
+<fieldset [disabled]="disabled() || readonly()" class="akten-felder">
+  <legend>Bankverbindung</legend>
+  <div class="akten-grid">
+    <label class="field">Kontoinhaber<input name="kontoinhaber" [(ngModel)]="daten().bank.kontoinhaber" maxlength="120" autocomplete="off"></label>
+    <label class="field">IBAN<input name="iban" [(ngModel)]="daten().bank.iban" maxlength="42" spellcheck="false" autocomplete="off" placeholder="DE00 0000 0000 0000 0000 00"></label>
+    <label class="field">BIC<input name="bic" [(ngModel)]="daten().bank.bic" maxlength="11" spellcheck="false" autocomplete="off"></label>
+    <label class="field">Kreditinstitut<input name="institut" [(ngModel)]="daten().bank.institut" maxlength="120"></label>
+  </div>
+</fieldset>
+<fieldset [disabled]="disabled() || readonly()" class="akten-felder">
+  <legend>Leitungsfunktion</legend>
+  <div class="leitungsfunktionen"><label><input type="checkbox" name="disziplinarisch" [(ngModel)]="daten().disziplinarisch"> Disziplinarische Leitung</label><label><input type="checkbox" name="fachlich" [(ngModel)]="daten().fachlich"> Fachliche Leitung</label></div>
+</fieldset>
+<fieldset [disabled]="disabled() || readonly()" class="akten-felder">
+  <legend>Kostenstellen</legend>
+  <p class="section-description">Verteilen Sie die Zuordnung auf insgesamt 100 Prozent.</p>
+  @for (k of daten().kostenstellen; track $index; let i = $index) {
+    <div class="akten-zeile">
+      <label class="field">Kostenstelle {{ i + 1 }}<input [name]="'kostenstelle-' + i" [(ngModel)]="k.nummer" maxlength="40" required></label>
+      <label class="field">Bezeichnung<input [name]="'kostenname-' + i" [(ngModel)]="k.bezeichnung" maxlength="120"></label>
+      <label class="field">Anteil (%)<input type="number" [name]="'kostenanteil-' + i" [(ngModel)]="k.anteil" min="0.01" max="100" step="0.01" required></label>
+      @if (!readonly()) { <button class="button secondary compact" type="button" (click)="daten().kostenstellen.splice(i, 1)" [attr.aria-label]="'Kostenstelle ' + (i + 1) + ' entfernen'">Entfernen</button> }
+    </div>
+  } @empty { <p>Keine Kostenstellen zugeordnet.</p> }
+  @if (!readonly()) { <button class="button secondary compact" type="button" (click)="kostenstelle()">Kostenstelle hinzufügen</button> }
+</fieldset>
+<fieldset [disabled]="disabled() || readonly()" class="akten-felder">
+  <legend>Vertreterregelungen</legend>
+  <p class="section-description">Diese fachlichen Zuordnungen vergeben keine Zugriffs- oder Freigaberechte.</p>
+  @for (v of daten().vertretungen; track $index; let i = $index) {
+    <div class="akten-eintrag">
+      <div class="akten-grid">
+        <label class="field">Vertretung {{ i + 1 }}<select [name]="'vertreter-' + i" [(ngModel)]="v.personId" required><option [ngValue]="0" disabled>Person wählen</option>@for (p of personen(); track p.id) { @if (p.id !== personId()) { <option [ngValue]="p.id">{{ p.name }} · {{ p.personalnummer }}</option> } }</select></label>
+        <label class="field">Aufgabe<input [name]="'aufgabe-' + i" [(ngModel)]="v.aufgabe" maxlength="240" required></label>
+        <label class="field">Vertretung ab<input type="date" [name]="'vertretung-ab-' + i" [(ngModel)]="v.beginn" required></label>
+        <label class="field">Vertretung bis<input type="date" [name]="'vertretung-bis-' + i" [ngModel]="v.ende" (ngModelChange)="v.ende = $event || null" [min]="v.beginn"></label>
+      </div>
+      @if (!readonly()) { <button class="button secondary compact" type="button" (click)="daten().vertretungen.splice(i, 1)">Vertretung entfernen</button> }
+    </div>
+  } @empty { <p>Keine Vertreterregelungen hinterlegt.</p> }
+  @if (!readonly()) { <button class="button secondary compact" type="button" (click)="vertretung()">Vertretung hinzufügen</button> }
+</fieldset>
+<fieldset [disabled]="disabled() || readonly()" class="akten-felder">
+  <legend>Schwerbehindertendaten</legend>
+  <div class="akten-grid">
+    <label class="field">Grad der Behinderung<input type="number" name="grad" [(ngModel)]="daten().schwerbehinderung.grad" min="0" max="100" step="1"></label>
+    <label class="field">Merkzeichen<input name="merkzeichen" [(ngModel)]="daten().schwerbehinderung.merkzeichen" maxlength="80"></label>
+    <label class="field">Ausweisnummer<input name="ausweisnummer" [(ngModel)]="daten().schwerbehinderung.ausweisnummer" maxlength="80"></label>
+    <label><input type="checkbox" name="gleichgestellt" [(ngModel)]="daten().schwerbehinderung.gleichgestellt"> Gleichstellung liegt vor</label>
+    <label class="field">Nachweis gültig ab<input type="date" name="nachweisAb" [ngModel]="daten().schwerbehinderung.gueltigAb" (ngModelChange)="daten().schwerbehinderung.gueltigAb = $event || null"></label>
+    <label class="field">Nachweis gültig bis<input type="date" name="nachweisBis" [ngModel]="daten().schwerbehinderung.gueltigBis" (ngModelChange)="daten().schwerbehinderung.gueltigBis = $event || null"></label>
+  </div>
+</fieldset>

@@ -82,7 +82,7 @@ test('Abwesenheiten bearbeiten, Überschneidung anzeigen und Änderungen nachvol
 
 test('Kontoname und Passwort verständlich prüfen, korrigieren und ohne Passwortänderung speichern', async ({ page, request }, testInfo) => {
   await page.goto('/mitarbeiter');
-  await page.getByRole('button', { name: 'Lokale Konten', exact: true }).click();
+  await page.getByRole('button', { name: 'Benutzer & Zugänge', exact: true }).click();
   const name = page.getByLabel('Kontoname', { exact: true });
   const passwort = page.getByLabel('Passwort', { exact: true });
   const anlegen = page.getByRole('button', { name: 'Konto anlegen', exact: true });
@@ -122,7 +122,7 @@ test('Kontoname und Passwort verständlich prüfen, korrigieren und ohne Passwor
 test('Lokales Konto über Oberfläche anlegen und Leserechte nach Login anzeigen', async ({ page, request }) => {
   expect((await request.post('/api/mitarbeiter', { data: { nachname: 'Lesbar', vorname: 'Anna', wochenstunden: 40, eintrittsdatum: '2020-01-01' } })).status()).toBe(201);
   await page.goto('/mitarbeiter');
-  await page.getByRole('button', { name: 'Lokale Konten', exact: true }).click();
+  await page.getByRole('button', { name: 'Benutzer & Zugänge', exact: true }).click();
   await page.getByLabel('Kontoname', { exact: true }).fill('browserleser');
   await page.getByLabel('Passwort', { exact: true }).fill('Leser-Browsertest-2026!');
   await page.getByRole('combobox', { name: 'Rolle', exact: true }).selectOption('LESEN');
@@ -141,7 +141,7 @@ test('Lokales Konto über Oberfläche anlegen und Leserechte nach Login anzeigen
   await expect(page.getByRole('heading', { name: 'Startübersicht', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Teamübersicht', exact: true }).click();
   await expect(page.locator('tbody')).toContainText('Lesbar');
-  await expect(page.getByRole('button', { name: 'Lokale Konten', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Benutzer & Zugänge', exact: true })).toHaveCount(0);
   await page.goto('/administration/konten');
   await expect(page).toHaveURL(/\/mitarbeiter$/);
   await expect(page.locator('#neu')).toBeHidden();

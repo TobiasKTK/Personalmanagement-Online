@@ -153,6 +153,7 @@
                 <td>{{ zahl(person.wochenstunden) }} Std.@if (!person.historieBekannt) { <small title="Für diesen Stichtag ist kein historischer Stand bekannt. Angezeigt wird der erste bekannte Stand."> · Stand unbekannt</small> }</td>
                 <td>
                   <div class="actions">
+                    @if (darfSchreiben()) { <button class="button secondary compact" [attr.data-personaldaten-id]="person.id" [attr.aria-label]="person.name + ' Personaldaten'" (click)="personaldaten.set(person)">Personaldaten</button> }
                     <button class="button secondary compact" [attr.aria-label]="person.name + ' Details'" (click)="details.set(person)">Details</button>
                     <button [hidden]="!darfSchreiben()"
                       class="icon-button"
@@ -242,6 +243,9 @@
 }
 @if (details(); as person) {
   <app-mitarbeiter-details [person]="person" [darfSchreiben]="darfSchreiben()" (geschlossen)="details.set(null); laden()" />
+}
+@if (personaldaten(); as person) {
+  <app-personaldaten [person]="person" (geschlossen)="personaldatenSchliessen(person.id)" />
 }
 <dialog
   #loeschdialog

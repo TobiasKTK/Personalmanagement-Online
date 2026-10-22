@@ -1,0 +1,23 @@
+:host { display: block; min-width: 0; }
+:host([hidden]) { display: none; }
+.fte-karte { border: 1px solid var(--line); border-radius: .5rem; padding: 1rem; margin: 1rem 0; background: var(--surface); }
+.fte-karte h3 { margin: 0 0 .75rem; }
+.fte-wert { font-size: 1.75rem; font-weight: 700; margin: .5rem 0; }
+.basis-form { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; margin-top: 1rem; }
+.basis-form .field { flex: 1 1 14rem; max-width: 24rem; }
+.erweiterungs-bereich { border: 1px solid var(--line); border-radius: .5rem; margin: .75rem 0; padding: 1rem; min-width: 0; }
+.erweiterungs-bereich > summary { font-weight: 600; cursor: pointer; overflow-wrap: anywhere; }
+.erweiterungs-bereich > summary span { color: var(--muted); font-weight: 400; }
+.erweiterungs-eintrag { margin: 1rem 0; padding: 1rem; border: 1px solid var(--line); border-radius: .25rem; min-width: 0; }
+.erweiterungs-eintrag legend { padding: 0 .4rem; font-weight: 600; }
+.erweiterungs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.erweiterungs-grid > * { min-width: 0; }
+.erweiterungs-grid textarea { min-height: 5rem; resize: vertical; }
+.erweiterungs-eintrag > .button { margin-top: .75rem; }
+.erweiterungs-fuss { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.felder-rahmen { border: 0; margin: 0; padding: 0; min-width: 0; }
+@media (max-width: 767px) {
+  .erweiterungs-grid { grid-template-columns: minmax(0, 1fr); }
+  .erweiterungs-bereich, .erweiterungs-eintrag, .fte-karte { padding: .75rem; }
+  .erweiterungs-fuss .button, .basis-form .button { width: 100%; }
+}

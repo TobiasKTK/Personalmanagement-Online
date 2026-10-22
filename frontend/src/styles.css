@@ -132,6 +132,7 @@ tbody tr:hover { background: var(--surface-subtle); }
 .management-list li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4) 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .management-list li > * { min-width: 0; max-width: 100%; }
 .management-list .actions { flex-wrap: wrap; }
+.konto-details { flex-basis: 100%; }
 .management-list p { margin-block: var(--space-2); color: var(--muted); }
 
 /* Native Dialoge erhalten die bestehende Fokusführung und Escape-Behandlung. */

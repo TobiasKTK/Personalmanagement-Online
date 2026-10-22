@@ -1,0 +1,76 @@
+<dialog #dialog class="personal-dialog" aria-labelledby="personaldaten-titel" (cancel)="schliessen($event)" (keydown.escape)="schliessen($event)">
+  <div class="dialog-heading">
+    <div><h2 id="personaldaten-titel">Personaldaten · {{ person().name }}</h2><p>Personal-Nr. {{ person().personalnummer }} · {{ akte()?.person?.organisationseinheit || 'Keine Organisationseinheit' }}</p></div>
+    <button class="button secondary" autofocus (click)="schliessen()" [disabled]="arbeitet() || kindArbeitet()">Schließen</button>
+  </div>
+  <div class="akten-inhalt">
+    <nav class="akten-navigation" aria-label="Bereiche der Personaldaten">@for (b of bereiche; track b) { <button class="button compact" [class.primary]="bereich === b" [class.secondary]="bereich !== b" [attr.aria-pressed]="bereich === b" (click)="bereichWaehlen(b)" [disabled]="arbeitet() || kindArbeitet()">{{ b }}</button> }</nav>
+    @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+    @if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
+    @if (!geladen()) { <p role="status">{{ arbeitet() ? 'Personaldaten werden geladen …' : 'Personaldaten konnten nicht geladen werden.' }}</p><button class="button secondary" (click)="neuLaden()" [disabled]="arbeitet()">Erneut laden</button> }
+    @if (geladen()) { @if (akte(); as a) { @if (daten(); as d) {
+      <fieldset class="akten-editor" [disabled]="arbeitet() || kindArbeitet()">
+      <legend class="sr-only">Personaldaten bearbeiten</legend>
+      @switch (bereich) {
+        @case ('Stammdaten') {
+          <form id="personaldaten-form" (ngSubmit)="speichern()"><app-personalstamm [daten]="d" [personen]="personen()" [personId]="person().id" [disabled]="arbeitet()" /></form>
+        }
+        @case ('Beschäftigung') {
+          <div class="akten-kennzahlen"><p><strong>{{ a.betriebszugehoerigkeitTage | number }} Tage</strong>Betriebszugehörigkeit zum {{ a.stichtag | date:'dd.MM.yyyy' }}</p><p><strong>{{ a.person.eintrittsdatum | date:'dd.MM.yyyy' }}</strong>Aktueller Eintritt</p><p><strong>{{ a.person.austrittsdatum ? (a.person.austrittsdatum | date:'dd.MM.yyyy') : 'Unbefristet / offen' }}</strong>Austritt</p></div>
+          <p class="section-description">Alle erfassten Beschäftigungstage einschließlich Ein- und Austritt zählen mit. Unterbrechungen und zukünftige Tage zählen nicht.</p>
+          <form id="personaldaten-form" (ngSubmit)="speichern()"><fieldset class="akten-felder" [disabled]="arbeitet()"><legend>Austrittsangaben zum aktuellen Zeitraum</legend><div class="akten-grid">
+            <label class="field">Austrittsgrund<input name="austrittsgrund" [(ngModel)]="d.austrittsgrund" maxlength="240"></label>
+            <label class="field">Kündigungsdatum<input type="date" name="kuendigungsdatum" [ngModel]="d.kuendigungsdatum" (ngModelChange)="d.kuendigungsdatum = $event || null" [max]="a.person.austrittsdatum || '9999-12-31'"></label>
+          </div></fieldset></form>
+          <h3>Frühere Beschäftigungszeiten</h3>
+          <div class="table-scroll"><table><caption class="sr-only">Frühere Beschäftigung und Austrittsgründe</caption><thead><tr><th>Eintritt</th><th>Austritt</th><th>Austrittsgrund</th><th>Kündigungsdatum</th><th>Aktion</th></tr></thead><tbody>
+            @for (z of a.fruehereZeiten; track z.id) { <tr><td>{{ z.beginn | date:'dd.MM.yyyy' }}</td><td>{{ z.ende | date:'dd.MM.yyyy' }}</td><td>{{ z.austrittsgrund || '—' }}</td><td>{{ (z.kuendigungsdatum | date:'dd.MM.yyyy') || '—' }}</td><td><button class="button secondary compact" (click)="zeitLoeschen(z)" [disabled]="arbeitet()">Entfernen</button></td></tr> }
+            @empty { <tr><td colspan="5">Keine früheren Beschäftigungszeiten erfasst.</td></tr> }
+          </tbody></table></div>
+          <details><summary>Frühere Beschäftigungszeit ergänzen</summary><form (ngSubmit)="zeitSpeichern()"><fieldset class="akten-felder" [disabled]="arbeitet()"><legend>Abgeschlossener Zeitraum</legend><div class="akten-grid">
+            <label class="field">Früherer Eintritt<input name="frueherBeginn" type="date" [(ngModel)]="zeit.beginn" required></label><label class="field">Früherer Austritt<input name="frueherEnde" type="date" [(ngModel)]="zeit.ende" [min]="zeit.beginn" required></label>
+            <label class="field">Früherer Austrittsgrund<input name="frueherGrund" [(ngModel)]="zeit.austrittsgrund" maxlength="240"></label><label class="field">Früheres Kündigungsdatum<input name="frueherKuendigung" type="date" [ngModel]="zeit.kuendigungsdatum" (ngModelChange)="zeit.kuendigungsdatum = $event || null"></label>
+          </div><button class="button secondary" type="submit">Beschäftigungszeit hinzufügen</button></fieldset></form></details>
+          @if (a.person.austrittsdatum) { <form (ngSubmit)="wiedereintritt()"><fieldset class="akten-felder" [disabled]="arbeitet()"><legend>Wiedereintritt</legend><p>Der bisherige Zeitraum wird mit seinen Austrittsangaben archiviert. Die Personalnummer bleibt erhalten.</p><label class="field stichtag">Neuer Eintritt<input name="neuerEintritt" type="date" [(ngModel)]="neuerEintritt" required></label><button class="button secondary" type="submit">Wiedereintritt erfassen</button></fieldset></form> }
+        }
+        @case ('Vergütung') { <form id="personaldaten-form" (ngSubmit)="speichern()"><app-verguetung [eintraege]="d.verguetungen" [disabled]="arbeitet()" /></form> }
+        @case ('Historie') {
+          <h3>Gespeicherte Stände der Personaldaten</h3><p class="section-description">Jeder Stand zeigt die bei der Speicherung bekannten Daten. Der Abteilungs- und Arbeitszeitverlauf ist unter Organisation verfügbar.</p>
+          @for (r of revisionen(); track r.id) {
+            <details class="akten-eintrag" (toggle)="standOeffnen(r.id, $event)"><summary>Stand #{{ r.id }} · {{ r.zeitpunkt | date:'dd.MM.yyyy HH:mm:ss' }} · {{ r.bearbeiter }}</summary>
+              @if (offeneStaende().has(r.id)) {
+              <div class="historischer-stand"><p>Historischer Stand · schreibgeschützt</p><p>{{ r.person.eintrittsdatum | date:'dd.MM.yyyy' }} – {{ (r.person.austrittsdatum | date:'dd.MM.yyyy') || 'offen' }} · {{ r.person.beschaeftigungsart || 'Keine Beschäftigungsart' }}</p><p>{{ r.person.organisationseinheit || 'Keine Organisationseinheit' }} · {{ r.person.wochenstunden }} Wochenstunden · {{ r.profilName || r.person.stelle || 'Keine Stelle' }}</p><p>Austrittsgrund: {{ r.daten.austrittsgrund || '—' }} · Kündigungsdatum: {{ (r.daten.kuendigungsdatum | date:'dd.MM.yyyy') || '—' }}</p>
+                @for (z of r.fruehereZeiten; track z.id) { <p>Frühere Beschäftigung: {{ z.beginn | date:'dd.MM.yyyy' }} – {{ z.ende | date:'dd.MM.yyyy' }} · {{ z.austrittsgrund || 'Kein Austrittsgrund erfasst' }}</p> }
+                <app-personalstamm [daten]="r.daten" [personId]="person().id" [personen]="personen()" [readonly]="true" /><app-verguetung [eintraege]="r.daten.verguetungen" [readonly]="true" />
+              </div>
+              }
+            </details>
+          } @empty { <p>Noch keine gespeicherten Stände vorhanden.</p> }
+          <div class="pagination"><span>{{ historieGesamt() }} Stände · Seite {{ historieSeite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Seite der Personaldatenhistorie" [disabled]="historieSeite === 0 || arbeitet()" (click)="historieSeite = historieSeite - 1; historieLaden()">←</button><button class="page-button" aria-label="Nächste Seite der Personaldatenhistorie" [disabled]="(historieSeite + 1) * 20 >= historieGesamt() || arbeitet()" (click)="historieSeite = historieSeite + 1; historieLaden()">→</button></div></div>
+        }
+      }
+      @if (organisationBesucht) { <div [hidden]="bereich !== 'Organisation'">
+          <form id="organisation-form" (ngSubmit)="speichern()"><fieldset class="akten-felder" [disabled]="arbeitet()"><legend>Stelle</legend>
+            <label class="field">Zugewiesenes Stellenprofil<select name="profilId" [(ngModel)]="d.profilId"><option [ngValue]="null">Kein Stellenprofil zugewiesen</option>@for (p of profile(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select></label>
+            @if (a.person.stelle) { <p>Bisherige Stellenbezeichnung: {{ a.person.stelle }}</p> }
+          </fieldset></form>
+          <h3>Organisationseinheit und Arbeitszeit</h3>
+          <p>{{ a.person.organisationseinheit || 'Keine Organisationseinheit' }} · {{ a.person.wochenstunden }} Wochenstunden</p>
+          <app-historie [person]="person().id" (geaendert)="organisationGeaendert()" (arbeitetGeaendert)="kindArbeitet.set($event)" />
+          <h3>Planstellen</h3>
+          <p class="section-description">Bei Bedarf bestehende Planstellen besetzen. Stellenanteile sind Planungsgrößen und ändern die Wochenstunden oder Organisationseinheit nicht automatisch.</p>
+          <ul class="management-list">@for (p of zugeordnetePlanstellen(); track p.id) { <li><span>{{ p.bezeichnung }} · {{ profilName(p.profilId) }} · {{ organisationsName(p.organisationId) }} · {{ p.anteil * 100 | number:'1.0-2' }} %</span><button class="button secondary compact" (click)="planstelleFreigeben(p)" [disabled]="arbeitet()">Besetzung aufheben</button></li> } @empty { <li>Keine Planstelle zugewiesen.</li> }</ul>
+          <form (ngSubmit)="planstelleZuordnen()" class="akten-grid"><label class="field">Freie Planstelle<select name="planstelleId" [(ngModel)]="planstelleId"><option [ngValue]="null">Planstelle wählen</option>@for (p of freiePlanstellen(); track p.id) { <option [ngValue]="p.id">{{ p.bezeichnung }} · {{ p.anteil * 100 }} %</option> }</select></label><button class="button secondary" [disabled]="arbeitet() || planstelleId === null">Planstelle zuweisen</button></form>
+          <p><a routerLink="/stellen">Stellen und Planstellen verwalten</a></p>
+      </div> }
+      @if (dokumenteBesucht) { <app-personaldokumente [personId]="person().id" [hidden]="bereich !== 'Dokumente'" (arbeitetGeaendert)="kindArbeitet.set($event)" /> }
+      @if (erweiterungenBesucht) { <app-personaldaten-erweiterungen [personId]="person().id" [hidden]="bereich !== 'Ergänzungen'" (arbeitetGeaendert)="kindArbeitet.set($event)" /> }
+      <div class="akten-fuss" [hidden]="bereich === 'Ergänzungen'">
+        @if (bereich !== 'Dokumente' && bereich !== 'Historie' && bereich !== 'Ergänzungen') { <button type="submit" [attr.form]="bereich === 'Organisation' ? 'organisation-form' : 'personaldaten-form'" class="button primary" [disabled]="arbeitet() || kindArbeitet()">{{ arbeitet() ? 'Wird gespeichert …' : 'Personaldaten speichern' }}</button> }
+        <button class="button secondary" (click)="neuLaden()" [disabled]="arbeitet() || kindArbeitet()">Neu laden</button>
+        @if (geaendert()) { <span>Ungespeicherte Änderungen</span> }
+      </div>
+      </fieldset>
+    } } }
+  </div>
+</dialog>

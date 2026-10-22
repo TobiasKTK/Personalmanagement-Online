@@ -38,6 +38,11 @@ public class ApiFehlerbehandlung {
                 "Ungültige JSON-Eingabe. Bitte Feldnamen, Zahlen und Datumsangaben (JJJJ-MM-TT) prüfen.");
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiFehler> dateiZuGross() {
+        return antwort(HttpStatus.PAYLOAD_TOO_LARGE, "PDF-Dateien dürfen höchstens 5 MiB groß sein.");
+    }
+
     @ExceptionHandler({ConstraintViolationException.class, MethodArgumentTypeMismatchException.class,
             MissingServletRequestParameterException.class})
     public ResponseEntity<ApiFehler> parameter() {

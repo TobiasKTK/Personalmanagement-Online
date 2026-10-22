@@ -44,7 +44,9 @@ public class AbwesenheitService {
     public Abwesenheit speichern(@Positive long person, @Positive Long id, @Valid @NotNull AbwesenheitEingabe e) {
         if (!mitarbeiter.sperren(person)) throw new FachlicherFehler(NICHT_GEFUNDEN, "Mitarbeiter nicht gefunden.");
         var m = mitarbeiter.finden(person, LocalDate.now(clock)).orElseThrow();
-        ZeitraumRegeln.abwesenheit(e.beginn(), e.ende(), m.eintrittsdatum(), m.austrittsdatum());
+        if (mitarbeiter.fruehereBeschaeftigungEnthaelt(person, e.beginn(), e.ende()))
+            ZeitraumRegeln.abwesenheit(e.beginn(), e.ende(), e.beginn(), e.ende());
+        else ZeitraumRegeln.abwesenheit(e.beginn(), e.ende(), m.eintrittsdatum(), m.austrittsdatum());
         Abwesenheit vorher = id == null ? null : finden(person, id);
         if (id != null && antraege.gebundeneAbwesenheit(id)) throw new FachlicherFehler(KONFLIKT, "Genehmigten Urlaub über den Antrag stornieren und bei Bedarf neu beantragen.");
         if (antraege.ueberschneidung(person, e.beginn(), e.ende())) throw new FachlicherFehler(KONFLIKT, "Der Zeitraum überschneidet sich mit einem offenen Urlaubsantrag.");

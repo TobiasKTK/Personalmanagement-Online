@@ -1,0 +1,24 @@
+<h3>Lohn- und Gehaltsdokumente</h3>
+<p>Importieren Sie PDF-Dokumente aus Agenda Lohn- und Gehaltsabrechnung oder anderen Quellen. Die Dokumente werden dieser Person zugeordnet.</p>
+@if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+@if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
+<form (ngSubmit)="importieren()"><fieldset class="akten-felder" [disabled]="arbeitet()"><legend>PDF importieren</legend><div class="akten-grid">
+  <label class="field">Dokumenttitel<input name="dokumenttitel" [(ngModel)]="eingabe.titel" maxlength="160" required></label>
+  <label class="field">Dokumentart<select name="dokumentart" [(ngModel)]="eingabe.art">@for (a of arten; track a.id) { <option [value]="a.id">{{ a.name }}</option> }</select></label>
+  <label class="field">Quelle<select name="quelle" [(ngModel)]="eingabe.quelle"><option value="AGENDA">Agenda Lohn- und Gehaltsabrechnung</option><option value="MANUELL">Andere Quelle</option></select></label>
+  <label class="field">Abrechnungsmonat<input name="monat" type="month" [(ngModel)]="eingabe.monat" [required]="eingabe.art === 'ABRECHNUNG'"></label>
+  <label class="field">PDF-Datei<input #dateifeld type="file" accept="application/pdf,.pdf" (change)="dateiWaehlen($event)" required><small>Maximal 5 MiB pro Dokument</small></label>
+  <button class="button primary" type="submit" [disabled]="!datei">PDF importieren</button>
+</div></fieldset></form>
+@if (!geladen() && arbeitet()) { <p role="status">Dokumente werden geladen …</p> }
+<div class="table-scroll"><table><caption class="sr-only">Gespeicherte Lohn- und Gehaltsdokumente</caption><thead><tr><th>Dokument</th><th>Monat</th><th>Quelle</th><th>Größe</th><th>Aktionen</th></tr></thead><tbody>
+  @for (d of dokumente(); track d.id) { <tr><td>{{ d.titel }}<br><small>{{ art(d.art) }}</small></td><td>{{ d.monat || '—' }}</td><td>{{ d.quelle === 'AGENDA' ? 'Agenda Lohn- und Gehaltsabrechnung' : 'Andere Quelle' }}</td><td>{{ d.groesse / 1024 | number:'1.0-1' }} KiB</td><td><div class="aktionen"><button class="button secondary compact" (click)="ansehen(d)" [disabled]="arbeitet()">Ansehen</button><button class="button secondary compact" (click)="loeschen(d)" [disabled]="arbeitet()">Löschen</button></div></td></tr> }
+  @empty { <tr><td colspan="5">{{ geladen() ? 'Noch keine Dokumente importiert.' : 'Keine Dokumente geladen.' }}</td></tr> }
+</tbody></table></div>
+<div class="pagination"><span>{{ gesamt() }} Dokumente · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Dokumentseite" [disabled]="seite === 0 || arbeitet()" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Dokumentseite" [disabled]="(seite + 1) * 20 >= gesamt() || arbeitet()" (click)="seite = seite + 1; laden()">→</button></div></div>
+<button class="button secondary compact" (click)="laden()" [disabled]="arbeitet()">Dokumente aktualisieren</button>
+@if (vorschau(); as url) {
+  <section aria-label="Dokumentansicht"><h3>{{ ausgewaehlt()?.titel }}</h3><div class="aktionen"><a class="button secondary" [href]="downloadUrl" [download]="'dokument-' + ausgewaehlt()?.id + '.pdf'">PDF herunterladen</a><button class="button secondary" (click)="vorschauSchliessen()">Ansicht schließen</button></div><p class="section-description">Falls Ihr Browser PDFs nicht eingebettet anzeigen kann, verwenden Sie den Download.</p>
+    <!-- Die native PDF-Anzeige wird durch iframe-sandbox blockiert. src ist ausschließlich eine selbst erzeugte application/pdf-Blob-URL. -->
+    <iframe class="pdf-ansicht" title="PDF-Dokumentansicht" [src]="url" referrerpolicy="no-referrer"></iframe></section>
+}

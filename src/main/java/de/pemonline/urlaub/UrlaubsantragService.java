@@ -254,7 +254,9 @@ public class UrlaubsantragService {
 
     private void antragszeitraumPruefen(long mitarbeiterId, LocalDate beginn, LocalDate ende, boolean halb, boolean neu) {
         var m = mitarbeiter.finden(mitarbeiterId, LocalDate.now(clock)).orElseThrow();
-        ZeitraumRegeln.abwesenheit(beginn, ende, m.eintrittsdatum(), m.austrittsdatum());
+        if (mitarbeiter.fruehereBeschaeftigungEnthaelt(mitarbeiterId, beginn, ende))
+            ZeitraumRegeln.abwesenheit(beginn, ende, beginn, ende);
+        else ZeitraumRegeln.abwesenheit(beginn, ende, m.eintrittsdatum(), m.austrittsdatum());
         if ((halb && !beginn.equals(ende)) || java.time.temporal.ChronoUnit.DAYS.between(beginn, ende) > 366)
             throw new FachlicherFehler(UNGUELTIG, "Halbe Tage benötigen ein einzelnes Datum; Anträge dürfen höchstens 367 Kalendertage umfassen.");
         if (neu && beginn.isBefore(LocalDate.now(clock))) {

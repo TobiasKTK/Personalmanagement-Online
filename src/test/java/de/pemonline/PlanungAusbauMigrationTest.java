@@ -22,7 +22,7 @@ class PlanungAusbauMigrationTest {
             s.executeUpdate("INSERT INTO abwesenheit (mitarbeiter_id, art, beginn, ende, halber_tag, version) SELECT id, 'URLAUB', DATE '2026-10-26', DATE '2026-10-26', TRUE, 5 FROM mitarbeiter");
             s.executeUpdate("INSERT INTO urlaubsantrag (mitarbeiter_id, antragsteller, beginn, ende, halber_tag, status, erstellt, abwesenheit_id, version) SELECT m.id, 'alt', DATE '2026-10-26', DATE '2026-10-26', TRUE, 'GENEHMIGT', CURRENT_TIMESTAMP, a.id, 1 FROM mitarbeiter m JOIN abwesenheit a ON a.mitarbeiter_id = m.id");
         }
-        var migration = Flyway.configure().dataSource(url, "sa", "").load(); assertThat(migration.migrate().migrationsExecuted).isEqualTo(6);
+        var migration = Flyway.configure().dataSource(url, "sa", "").load(); assertThat(migration.migrate().migrationsExecuted).isEqualTo(8);
         try (var c = DriverManager.getConnection(url, "sa", ""); var s = c.createStatement()) {
             try (var r = s.executeQuery("SELECT anspruch, uebertrag, arbeitstage, feiertage, version, feiertagskalender_id, ausnahmen FROM urlaubskonto")) {
                 assertThat(r.next()).isTrue(); assertThat(r.getDouble(1)).isEqualTo(30); assertThat(r.getDouble(2)).isEqualTo(2.5); assertThat(r.getString(3)).isEqualTo("1,2,3,4"); assertThat(r.getString(4)).isEqualTo("2026-01-01"); assertThat(r.getLong(5)).isEqualTo(4); assertThat(r.getObject(6)).isNull(); assertThat(r.getString(7)).isEmpty();
@@ -41,7 +41,7 @@ class PlanungAusbauMigrationTest {
     @Test void leereDatenbankWirdVollstaendigUndWiederholbarMigriert() {
         String url = "jdbc:h2:file:" + verzeichnis.resolve("leer").toString().replace('\\', '/');
         var migration = Flyway.configure().dataSource(url, "sa", "").load();
-        assertThat(migration.migrate().migrationsExecuted).isEqualTo(14); migration.validate(); assertThat(migration.migrate().migrationsExecuted).isZero();
+        assertThat(migration.migrate().migrationsExecuted).isEqualTo(16); migration.validate(); assertThat(migration.migrate().migrationsExecuted).isZero();
     }
     @Test void aktualisierungVonV12ErhaeltBesetzungsregelnUndFuehrtVersionenNachNeustartFort() throws Exception {
         String url = "jdbc:h2:file:" + verzeichnis.resolve("regelversionen").toString().replace('\\', '/');
@@ -51,7 +51,7 @@ class PlanungAusbauMigrationTest {
             s.executeUpdate("INSERT INTO besetzungsregel (organisationseinheit_id, mindestbesetzung, wochentage, version) SELECT id, 2.5, '1,2,3', CASE WHEN name = 'Entwicklung' THEN 42 ELSE 7 END FROM organisationseinheit");
         }
         var migration = Flyway.configure().dataSource(url, "sa", "").load();
-        assertThat(migration.migrate().migrationsExecuted).isEqualTo(2);
+        assertThat(migration.migrate().migrationsExecuted).isEqualTo(4);
         long organisation;
         try (var c = DriverManager.getConnection(url, "sa", ""); var s = c.createStatement()) {
             try (var r = s.executeQuery("SELECT b.* FROM besetzungsregel b JOIN organisationseinheit o ON o.id = b.organisationseinheit_id WHERE o.name = 'Entwicklung'")) {

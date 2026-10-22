@@ -1,5 +1,17 @@
+.filter-grid > .field:first-child { flex-basis: 320px; }
+.monatsnavigation { display: flex; align-items: center; gap: var(--space-2); }
+.monatsnavigation .page-button { flex-shrink: 0; min-width: 44px; height: 44px; }
 .kalender { min-width: 1300px; border-collapse: separate; border-spacing: 1px; }
 .kalender th, .kalender td { text-align: center; padding: 9px 5px; min-width: 30px; }
+.kalender td:has(.abwesenheit-tag) { padding: 0; }
+.abwesenheit-tag { display: block; width: 100%; min-height: 44px; padding: var(--space-2) var(--space-1); border: 0; background: transparent; color: inherit; }
+.abwesenheit-tag:hover:not(:disabled) { box-shadow: inset 0 0 0 2px currentColor; }
+.abwesenheit-tag:focus-visible { outline-offset: -3px; }
+.kalender td.markiert { box-shadow: inset 0 0 0 3px var(--primary); }
+.kalender td.markiert .abwesenheit-tag { font-weight: 750; text-decoration: underline; text-underline-offset: .2em; }
+.kalender-auswahl { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); margin-block: var(--space-4); padding: var(--space-4); border: 1px solid var(--primary); border-radius: var(--radius); background: var(--primary-soft); }
+.kalender-auswahl p { margin: 0; }
+.kalender-auswahl .actions { flex-wrap: wrap; }
 .kalender th:first-child { position: sticky; left: 0; z-index: 1; min-width: 210px; text-align: left; background: var(--surface); }
 .kalender small { display: block; color: var(--muted); font-weight: normal; }
 .kalender-suche { margin: 0; letter-spacing: normal; }
@@ -17,4 +29,8 @@ caption { text-align: left; padding: 10px 0; }
   .kalender th:first-child { min-width: 160px; max-width: 160px; white-space: normal; }
   .kalender-suche input { width: 150px; }
   .personen-link { overflow-wrap: anywhere; min-height: 44px; }
+}
+@media (max-width: 380px) {
+  .monatsnavigation { display: grid; grid-template-columns: 1fr 1fr; }
+  .monatsnavigation input { grid-column: 1 / -1; grid-row: 1; }
 }

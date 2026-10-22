@@ -29,22 +29,22 @@
       }
     }
     <p class="workspace-label">VERWALTUNG</p>
-    <button class="nav-item" routerLink="/mandanten" routerLinkActive="active" ariaCurrentWhenActive="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3h14v18M9 7h1m4 0h1M9 11h1m4 0h1M9 21v-6h6v6"/></svg>Firma wechseln</button>
-    @if (sitzung()?.mandantenspeicherId != null && sitzung()?.rolle === 'ADMIN') {
-      <button class="nav-item" routerLink="/administration/konten" routerLinkActive="active" ariaCurrentWhenActive="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>Lokale Konten</button>
-      <button class="nav-item" routerLink="/administration/planung" routerLinkActive="active" ariaCurrentWhenActive="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-6 0v6"/></svg>Planung verwalten</button>
+    <button class="nav-item" routerLink="/mandanten" routerLinkActive="active" ariaCurrentWhenActive="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3h14v18M9 7h1m4 0h1M9 11h1m4 0h1M9 21v-6h6v6"/></svg>Firmen</button>
+    @if (sitzung()?.systemverwaltung || (sitzung()?.mandantenspeicherId != null && sitzung()?.rolle === 'ADMIN')) {
+      <button class="nav-item" routerLink="/administration/konten" routerLinkActive="active" ariaCurrentWhenActive="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>Benutzer &amp; Zugänge</button>
     }
-    @if (sitzung()?.systemverwaltung) {
-      <button class="nav-item" routerLink="/administration/mandanten" routerLinkActive="active" ariaCurrentWhenActive="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V7h8v14m0-18h10v18M6 11h2m-2 4h2m7-8h2m-2 4h2m-2 4h2"/></svg>Firmen verwalten</button>
+    @if (sitzung()?.mandantenspeicherId != null && sitzung()?.rolle === 'ADMIN') {
+      <button class="nav-item" routerLink="/administration/planung" routerLinkActive="active" ariaCurrentWhenActive="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-6 0v6"/></svg>Planung verwalten</button>
     }
   </nav>
   <div class="sidebar-bottom">Personalmanagement Online</div>
 </aside>
 <main #inhalt id="inhalt" tabindex="-1">
   <header class="topbar">
-    <div class="company-context"><span>Aktuelle Firma</span><strong>{{ sitzung()?.firma || 'Firma auswählen' }}</strong>
+    <a class="company-context" routerLink="/mandanten" [attr.aria-label]="'Aktuelle Firma: ' + (sitzung()?.firma || 'Keine ausgewählt') + '. Firma auswählen'">
+      <span>Aktuelle Firma</span><strong>{{ sitzung()?.firma || 'Firma auswählen' }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></strong>
       @if (sitzung()?.mandantenspeicherId != null) { <small class="mandanten-kennung">ID {{ sitzung()?.mandantenspeicherId }}</small> }
-    </div>
+    </a>
     <div class="topbar-actions">
       <div class="account-context"><strong>{{ sitzung()?.name }}</strong><time>{{ heute }}</time></div>
       <a class="button secondary compact" href="/konto/email">{{ sitzung()?.keycloak ? 'Mein Keycloak-Konto' : 'Meine E-Mail' }}</a>

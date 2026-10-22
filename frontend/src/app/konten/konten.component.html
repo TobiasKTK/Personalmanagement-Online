@@ -1,13 +1,15 @@
-<section class="team-panel administration" aria-label="Administration">
-  <h1>Konten</h1>
+<section class="team-panel administration" aria-labelledby="konten-titel" [attr.aria-busy]="arbeitet()">
+  <h1 id="konten-titel">Benutzer &amp; Zugänge</h1>
   @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
   @if (meldung()) { <p role="status">{{ meldung() }}</p> }
-  <h2>{{ session.sitzung()?.keycloak ? 'Firmenzugänge' : 'Lokale Konten' }}</h2>
-  <p>Rolle und Aktivierung gelten für die aktuell ausgewählte Firma. Kontonamen sind über alle Firmen eindeutig; weitere Firmenzugänge ordnet die Systemverwaltung unter „Firmen verwalten“ zu.</p>
+  <p>Ein Benutzerkonto kann Zugang zu mehreren Firmen haben. Rolle und Freigabe werden für jede Firma einzeln festgelegt.</p>
   @if (session.sitzung()?.keycloak) {
     <p>Die Keycloak-Administration verknüpft das zentrale Benutzerkonto mit dem hier vergebenen Kontonamen. Passwörter und E-Mail-Adressen werden in Keycloak verwaltet.</p>
   }
-  <p>Lesen: Mitarbeiter und Abwesenheiten ansehen. Personalverwaltung: zusätzlich Mitarbeiter und Abwesenheiten bearbeiten sowie Verlauf lesen. Administration: zusätzlich Organisationseinheiten und Konten verwalten.</p>
+  @if (firmenadmin()) {
+  <h2>{{ kontoNeu ? 'Benutzerkonto anlegen' : 'Firmenzugang bearbeiten' }}</h2>
+  <p>Für die aktuelle Firma <strong>{{ session.sitzung()?.firma }}</strong>. Kontonamen sind über alle Firmen eindeutig.</p>
+  <p>Lesen: Mitarbeiter und Abwesenheiten ansehen. Personalverwaltung: zusätzlich bearbeiten. Administration: zusätzlich Organisationseinheiten und Firmenzugänge verwalten.</p>
   <form #kontoFormular="ngForm" (ngSubmit)="kontoSpeichern(kontoFormular)" class="filter-grid konto-formular">
     <div class="field">
       <label for="kontoname">Kontoname</label>
@@ -24,13 +26,81 @@
     </div>
     }
     <label class="field">Rolle<select name="rolle" [(ngModel)]="konto.rolle" [disabled]="arbeitet()"><option value="LESEN">Lesen</option><option value="PERSONAL">Personalverwaltung</option><option value="ADMIN">Administration</option></select></label>
-    <label><input type="checkbox" name="aktiv" [(ngModel)]="konto.aktiv" [disabled]="arbeitet()"> Konto aktiv</label>
+    <label><input type="checkbox" name="aktiv" [(ngModel)]="konto.aktiv" [disabled]="arbeitet()"> Zugang zur aktuellen Firma aktiv</label>
     <button class="button primary" [disabled]="arbeitet()">{{ kontoNeu ? 'Konto anlegen' : 'Konto speichern' }}</button>
     @if (!kontoNeu) { <button type="button" class="button secondary" (click)="kontoBearbeiten(undefined, kontoFormular)" [disabled]="arbeitet()">Abbrechen</button> }
   </form>
-  <ul class="management-list">
+  @if (!session.sitzung()?.systemverwaltung) {
+  <h2>Firmenzugänge</h2>
+  <p>Änderungen an Rolle und Freigabe betreffen nur die aktuelle Firma. Weitere Firmenzugänge und globale Kontosperren verwaltet die Systemverwaltung.</p>
+  @if (!session.sitzung()?.keycloak) { <p>Ein Passwort gilt für alle Firmen. Passwörter firmenübergreifender Konten kann nur die Systemverwaltung ändern.</p> }
+  <ul class="management-list" aria-label="Firmenzugänge">
     @for (k of konten(); track k.name) {
       <li><span>{{ k.name }} · {{ k.rolle }} · {{ k.aktiv ? 'aktiv' : 'gesperrt' }}</span><button class="button secondary compact" (click)="kontoBearbeiten(k, kontoFormular)" [disabled]="arbeitet()">Konto {{ k.name }} bearbeiten</button></li>
-    }
+    } @empty { <li>Noch keine Firmenzugänge vorhanden.</li> }
   </ul>
+  }
+  } @else {
+    <p>Zum Anlegen eines Benutzerkontos <a routerLink="/mandanten">eine Firma wählen</a>, in der du Administrationsrechte hast. Bestehende Konten und Firmenzugänge kannst du hier verwalten.</p>
+  }
+  @if (session.sitzung()?.systemverwaltung) {
+    <h2>Benutzerkonten und Firmenzugänge</h2>
+    <p>Eine globale Kontosperre betrifft alle Firmen. Eine gesperrte Firmenzuordnung betrifft nur die jeweilige Firma.</p>
+    <ul class="management-list" aria-label="Benutzerkonten">
+      @for (k of benutzer(); track k.name) {
+        <li>
+          <div>
+            <strong>{{ k.name }}</strong>
+            <p>{{ k.aktiv ? 'Konto insgesamt aktiv' : 'Konto insgesamt gesperrt' }}{{ k.systemverwaltung ? ' · Systemverwaltung' : '' }}</p>
+            @for (z of k.zuordnungen; track z.mandantenspeicherId) {
+              <p>{{ z.firma }} · {{ z.rolle === 'ADMIN' ? 'Administration' : z.rolle === 'PERSONAL' ? 'Personalverwaltung' : 'Lesen' }} · {{ z.aktiv ? 'Zugang aktiv' : 'Zugang gesperrt' }}
+                <button class="button secondary compact" [disabled]="arbeitet()" (click)="benutzerBearbeiten(k, z)">Zugang {{ k.name }} / {{ z.firma }} bearbeiten</button>
+              </p>
+            } @empty { <p>Noch keiner Firma zugeordnet.</p> }
+          </div>
+          <button class="button secondary compact" [disabled]="arbeitet()" [attr.aria-expanded]="globalesKonto?.name === k.name" (click)="benutzerBearbeiten(k)">Konto {{ k.name }} bearbeiten</button>
+          @if (globalesKonto?.name === k.name) {
+            @if (globalesKonto; as bearbeitet) {
+              <div class="konto-details">
+                <form #benutzerForm="ngForm" (ngSubmit)="benutzerSpeichern(benutzerForm)">
+                  <fieldset [disabled]="arbeitet()">
+                    <legend>Benutzerkonto {{ bearbeitet.name }}</legend>
+                    <p>Diese Einstellungen gelten für alle Firmen. Systemverwaltungsrechte erlauben die firmenübergreifende Verwaltung von Konten und Firmen.</p>
+                    <div class="actions">
+                      <label><input type="checkbox" name="globalAktiv" [(ngModel)]="bearbeitet.aktiv"> Konto insgesamt aktiv</label>
+                      <label><input type="checkbox" name="systemverwaltung" [(ngModel)]="bearbeitet.systemverwaltung"> Systemverwaltung</label>
+                    </div>
+                    @if (!session.sitzung()?.keycloak) {
+                      <div class="field">
+                        <label for="globales-passwort">Neues Passwort (leer: beibehalten)</label>
+                        <input id="globales-passwort" type="password" name="globalesPasswort" #globalesPasswort="ngModel" [(ngModel)]="bearbeitet.passwort" minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="globales-passwort-hilfe" [attr.aria-invalid]="globalesPasswort.touched && globalesPasswort.invalid ? true : null">
+                        <span id="globales-passwort-hilfe" [class.field-error]="globalesPasswort.touched && globalesPasswort.invalid" aria-live="polite">{{ globalesPasswort.touched && globalesPasswort.invalid ? 'Bitte ein Passwort mit 12–128 Zeichen eingeben.' : 'Ein Passwort gilt für alle zugeordneten Firmen.' }}</span>
+                      </div>
+                    } @else { <p>Passwörter und E-Mail-Adressen werden in Keycloak verwaltet.</p> }
+                    <button class="button primary">Konto speichern</button>
+                  </fieldset>
+                </form>
+                <form #zugangForm="ngForm" (ngSubmit)="zugangSpeichern(zugangForm)">
+                  <fieldset [disabled]="arbeitet()">
+                    <legend>Firmenzugang für {{ bearbeitet.name }}</legend>
+                    <p>Eine weitere Firma auswählen, um Zugang zu vergeben. Bei einer bereits zugeordneten Firma werden deren aktuelle Rechte geladen.</p>
+                    <div class="filter-grid">
+                      <label class="field">Firma für Zugang<select name="zugangFirma" [(ngModel)]="zugang.mandantenspeicherId" (ngModelChange)="zugangFirmaWaehlen()" required>
+                        <option [ngValue]="null">Bitte wählen</option>
+                        @for (f of firmen(); track f.mandantenspeicherId) { <option [ngValue]="f.mandantenspeicherId">{{ f.name }} ({{ f.mandantenspeicherId }})</option> }
+                      </select></label>
+                      <label class="field">Rolle in dieser Firma<select name="zugangRolle" [(ngModel)]="zugang.rolle"><option value="LESEN">Lesen</option><option value="PERSONAL">Personalverwaltung</option><option value="ADMIN">Administration</option></select></label>
+                      <label><input type="checkbox" name="zugangAktiv" [(ngModel)]="zugang.aktiv"> Zugang aktiv</label>
+                    </div>
+                    <button class="button primary" [disabled]="!zugang.mandantenspeicherId">Firmenzugang speichern</button>
+                  </fieldset>
+                </form>
+                <button class="button secondary" [disabled]="arbeitet()" (click)="globalesKonto = null">Bearbeitung schließen</button>
+              </div>
+            }
+          }
+        </li>
+      } @empty { <li>Noch keine Benutzerkonten vorhanden.</li> }
+    </ul>
+  }
 </section>

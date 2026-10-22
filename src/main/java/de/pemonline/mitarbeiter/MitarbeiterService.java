@@ -29,9 +29,11 @@ public class MitarbeiterService {
     private final Clock clock;
     private final AbwesenheitRepository abwesenheiten;
     private final HistorieRepository historie;
+    private final de.pemonline.personaldaten.PersonaldatenService personaldaten;
 
     public MitarbeiterService(MitarbeiterRepository repository, OutboxService ereignisse,
-            OrganisationService organisationen, VerlaufService verlauf, Clock clock, AbwesenheitRepository abwesenheiten, HistorieRepository historie) {
+            OrganisationService organisationen, VerlaufService verlauf, Clock clock, AbwesenheitRepository abwesenheiten, HistorieRepository historie, de.pemonline.personaldaten.PersonaldatenService personaldaten) {
+        this.personaldaten = personaldaten;
         this.historie = historie;
         this.repository = repository;
         this.ereignisse = ereignisse;
@@ -94,6 +96,8 @@ public class MitarbeiterService {
             throw new FachlicherFehler(FachlicherFehler.Art.UNGUELTIG, "Zum Bearbeiten ist die aktuelle Version erforderlich.");
         }
         if (!java.util.Objects.equals(eingabe.datenGueltigAb(), bestehend.datenGueltigAb())) throw konflikt();
+        if (repository.fruehereBeschaeftigungUeberlappt(id, eingabe.eintrittsdatum()))
+            throw new FachlicherFehler(FachlicherFehler.Art.KONFLIKT, "Der Eintritt überschneidet sich mit einer früheren Beschäftigungszeit.");
         if (abwesenheiten.ausserhalb(id, eingabe.eintrittsdatum(), eingabe.austrittsdatum()))
             throw new FachlicherFehler(FachlicherFehler.Art.KONFLIKT, "Vorhandene Abwesenheiten liegen außerhalb des neuen Beschäftigungszeitraums.");
         Long organisationId = organisationen.zuordnung(eingabe.organisationseinheitId(), eingabe.organisationseinheit());
@@ -111,6 +115,7 @@ public class MitarbeiterService {
         ereignisse.vormerken(new MitarbeiterEreignis(id, Aktion.GEAENDERT, clock.instant()));
         Mitarbeiter neu = repository.finden(id, heute).orElseThrow();
         verlauf.speichern(id, "GEAENDERT", bestehend, neu);
+        personaldaten.standFesthalten(id);
         return neu;
     }
 

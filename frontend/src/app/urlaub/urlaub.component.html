@@ -23,14 +23,50 @@
     <label class="field">Status<select name="status" [(ngModel)]="status"><option value="ALLE">Alle Status</option><option value="BEANTRAGT">Beantragt</option><option value="GENEHMIGT">Genehmigt</option><option value="ABGELEHNT">Abgelehnt</option><option value="ZURUECKGEZOGEN">Zurückgezogen</option><option value="STORNIERT">Storniert</option></select></label>
     <button class="button secondary">Anträge anzeigen</button>
   </fieldset></form>
-  <ul class="management-list">@for (a of antraege(); track a.id) {
-    <li><div><strong>{{ a.name }}</strong> · {{ a.beginn | date:'dd.MM.yyyy' }} – {{ a.ende | date:'dd.MM.yyyy' }}{{ a.halberTag ? ' · ½ Tag' : '' }}<p>{{ statusTexte[a.status] }} · {{ a.notiz || 'Keine Notiz' }}</p>@if (a.bearbeiter) { <p>{{ a.bearbeiter }}: {{ a.entscheidung || statusTexte[a.status] }}</p> }</div>
-      <div class="actions">@if (a.status === 'BEANTRAGT') {
-        @if (freigaben) { <button class="button primary compact" [disabled]="arbeitet()" (click)="vorbereiten(a, 'GENEHMIGEN')">Genehmigen</button><button class="button secondary compact" [disabled]="arbeitet()" (click)="vorbereiten(a, 'ABLEHNEN')">Ablehnen</button> }
-        @else { <button class="button secondary compact" [disabled]="arbeitet()" (click)="vorbereiten(a, 'ZURUECKZIEHEN')">Zurückziehen</button> }
-      } @if (a.status === 'GENEHMIGT' && (freigaben || a.beginn >= heute)) { <button class="button secondary compact" [disabled]="arbeitet()" (click)="vorbereiten(a, 'STORNIEREN')">Stornieren</button> }</div>
-    </li>
-  } @empty { <li>Keine Anträge für diese Auswahl.</li> }</ul>
+  <ul class="antrags-kacheln" aria-label="Urlaubsanträge">
+    @for (a of antraege(); track a.id) {
+      <li class="antrags-kachel">
+        <button type="button" class="antrag-oeffnen" aria-haspopup="dialog" [disabled]="arbeitet()" (click)="detailsAnzeigen(a, antragsdialog)">
+          <span class="antrag-kopf"><strong>{{ a.name }}</strong><span class="antrag-status" [attr.data-status]="a.status">{{ statusTexte[a.status] }}</span></span>
+          <span class="antrag-zeitraum">{{ a.beginn | date:'dd.MM.yyyy' }} – {{ a.ende | date:'dd.MM.yyyy' }}</span>
+          @if (a.halberTag) { <span class="antrag-umfang">½ Tag</span> }
+          <span class="antrag-link">Details ansehen <span aria-hidden="true">→</span></span>
+        </button>
+        @if (a.status === 'BEANTRAGT' || (a.status === 'GENEHMIGT' && (freigaben || a.beginn >= heute))) {
+          <div class="antrag-aktionen">
+            @if (a.status === 'BEANTRAGT') {
+              @if (freigaben) {
+                <button type="button" class="button primary" [disabled]="arbeitet()" (click)="vorbereiten(a, 'GENEHMIGEN')">Genehmigen</button>
+                <button type="button" class="button secondary" [disabled]="arbeitet()" (click)="vorbereiten(a, 'ABLEHNEN')">Ablehnen</button>
+              } @else { <button type="button" class="button secondary" [disabled]="arbeitet()" (click)="vorbereiten(a, 'ZURUECKZIEHEN')">Zurückziehen</button> }
+            } @else { <button type="button" class="button secondary" [disabled]="arbeitet()" (click)="vorbereiten(a, 'STORNIEREN')">Stornieren</button> }
+          </div>
+        }
+      </li>
+    } @empty { <li class="antraege-leer">Keine Anträge für diese Auswahl.</li> }
+  </ul>
+  <dialog #antragsdialog class="antragsdialog" aria-labelledby="antragsdialog-titel" (close)="detailAntrag.set(null)">
+    <div class="dialog-heading">
+      <h2 id="antragsdialog-titel">Urlaubsantrag</h2>
+      <button type="button" class="button secondary" autofocus (click)="antragsdialog.close()">Schließen</button>
+    </div>
+    @if (detailAntrag(); as a) {
+      <div class="antragsdetails" tabindex="0" role="region" aria-label="Antragsdetails">
+        <h3>{{ a.name }}</h3>
+        <dl>
+          <div><dt>Zeitraum</dt><dd>{{ a.beginn | date:'dd.MM.yyyy' }} – {{ a.ende | date:'dd.MM.yyyy' }}{{ a.halberTag ? ' · ½ Tag' : '' }}</dd></div>
+          <div><dt>Status</dt><dd><span class="antrag-status" [attr.data-status]="a.status">{{ statusTexte[a.status] }}</span></dd></div>
+          @if (a.bearbeiter) { <div><dt>Bearbeitet von</dt><dd>{{ a.bearbeiter }}</dd></div> }
+        </dl>
+        <h3>Notiz</h3>
+        <p class="antrag-text">{{ a.notiz || 'Keine Notiz hinterlegt.' }}</p>
+        @if (a.status !== 'BEANTRAGT') {
+          <h3>Begründung zur Entscheidung</h3>
+          <p class="antrag-text">{{ a.entscheidung || 'Keine Begründung hinterlegt.' }}</p>
+        }
+      </div>
+    }
+  </dialog>
   @if (entscheidung; as e) {
     <form (ngSubmit)="entscheiden()"><fieldset [disabled]="arbeitet()"><legend>{{ e.aktion }} · {{ e.antrag.name }} · {{ e.antrag.beginn | date:'dd.MM.yyyy' }}</legend>
       @if (e.besetzung; as b) {

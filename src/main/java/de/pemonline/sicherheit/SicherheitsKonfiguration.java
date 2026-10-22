@@ -36,6 +36,7 @@ public class SicherheitsKonfiguration {
                         .requestMatchers("/api/mandanten", "/api/mandanten/**", "/api/sitzung").authenticated()
                         .requestMatchers("/api/konten/**").hasRole("ADMIN")
                         .requestMatchers("/api/entwicklung/**").hasAnyRole("PERSONAL", "ADMIN")
+                        .requestMatchers("/api/mitarbeiter/*/personaldaten", "/api/mitarbeiter/*/personaldaten/**").hasAnyRole("PERSONAL", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/organisationseinheiten/**").hasAnyRole("LESEN", "PERSONAL", "ADMIN")
                         .requestMatchers("/api/vertretungen/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/feiertagskalender").hasAnyRole("PERSONAL", "ADMIN")

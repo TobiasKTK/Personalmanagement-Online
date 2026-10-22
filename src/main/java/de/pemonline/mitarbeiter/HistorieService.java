@@ -30,7 +30,9 @@ public class HistorieService {
     private final VerlaufService verlauf;
     private final OutboxService outbox;
     private final Clock clock;
-    public HistorieService(HistorieRepository repository, MitarbeiterRepository mitarbeiter, OrganisationService organisationen, VerlaufService verlauf, OutboxService outbox, Clock clock) {
+    private final de.pemonline.personaldaten.PersonaldatenService personaldaten;
+    public HistorieService(HistorieRepository repository, MitarbeiterRepository mitarbeiter, OrganisationService organisationen, VerlaufService verlauf, OutboxService outbox, Clock clock, de.pemonline.personaldaten.PersonaldatenService personaldaten) {
+        this.personaldaten = personaldaten;
         this.repository = repository; this.mitarbeiter = mitarbeiter; this.organisationen = organisationen; this.verlauf = verlauf; this.outbox = outbox; this.clock = clock;
     }
     public Seite liste(@Positive long person, @Min(0) int seite) {
@@ -50,6 +52,7 @@ public class HistorieService {
         repository.synchronisieren(person, LocalDate.now(clock));
         var nachher = repository.finden(person, id).orElseThrow();
         verlauf.speichern(person, vorher == null ? "HISTORIE_ANGELEGT" : "HISTORIE_GEAENDERT", vorher, nachher);
+        personaldaten.standFesthalten(person);
         outbox.vormerken(new MitarbeiterEreignis(person, MitarbeiterEreignis.Aktion.GEAENDERT, clock.instant()));
         return nachher;
     }
@@ -61,6 +64,7 @@ public class HistorieService {
         if (!repository.loeschen(person, id, version)) throw konflikt();
         repository.synchronisieren(person, LocalDate.now(clock));
         verlauf.speichern(person, "HISTORIE_GELOESCHT", vorher, null);
+        personaldaten.standFesthalten(person);
         outbox.vormerken(new MitarbeiterEreignis(person, MitarbeiterEreignis.Aktion.GEAENDERT, clock.instant()));
     }
     private void sperren(long person, long version) {

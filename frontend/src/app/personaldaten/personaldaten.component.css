@@ -1,0 +1,38 @@
+:host { display: block; min-width: 0; }
+:host([hidden]) { display: none; }
+.akten-editor { border: 0; margin: 0; padding: 0; min-width: 0; }
+.personal-dialog { width: min(1100px, calc(100vw - 2rem)); max-width: calc(100vw - 1rem); padding: 0; }
+.personal-dialog .dialog-heading { gap: 1rem; align-items: flex-start; padding: 1.25rem 1.5rem 0; }
+.personal-dialog h2 { margin: 0; }
+.personal-dialog .dialog-heading p { margin: .5rem 0 0; color: var(--muted); }
+.akten-inhalt { padding: 0 1.5rem 1.5rem; }
+.akten-navigation { display: flex; gap: .5rem; flex-wrap: wrap; padding: 1rem 0; border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
+.akten-felder { border: 1px solid var(--line); border-radius: .5rem; padding: 1rem; margin: 1rem 0; min-width: 0; }
+.akten-felder legend { font-weight: 600; padding: 0 .5rem; }
+.akten-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: end; }
+.akten-grid > *, .akten-zeile > * { min-width: 0; }
+.akten-zeile { display: grid; grid-template-columns: 1fr 2fr 1fr auto; gap: .75rem; align-items: end; margin-bottom: 1rem; }
+.akten-eintrag { border-bottom: 1px solid var(--line); padding: 1rem 0; }
+.akten-eintrag .button { margin-top: .75rem; }
+.akten-kennzahlen { display: flex; flex-wrap: wrap; gap: 1rem 2rem; padding: 1rem 0; }
+.akten-kennzahlen p { margin: 0; }
+.akten-kennzahlen strong { display: block; font-size: 1.25rem; }
+.akten-fuss { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; padding-top: 1rem; border-top: 1px solid var(--line); }
+.akten-felder:disabled input, .akten-felder:disabled select { color: var(--text); opacity: 1; }
+.stichtag { max-width: 16rem; margin: 1rem 0; }
+.pdf-ansicht { width: 100%; height: 65vh; min-height: 320px; border: 1px solid var(--line); margin-top: 1rem; }
+.historischer-stand { border-left: 3px solid var(--line); padding-left: 1rem; margin-top: 1rem; }
+.aktionen { display: flex; flex-wrap: wrap; gap: .5rem; }
+.leitungsfunktionen { display: flex; flex-wrap: wrap; gap: 1rem 2rem; }
+.leitungsfunktionen label { display: flex; align-items: center; gap: .5rem; }
+.personal-dialog table { width: 100%; }
+@media (max-width: 767px) {
+  .akten-grid, .akten-zeile { grid-template-columns: minmax(0, 1fr); }
+  .akten-inhalt { padding: 0 1rem 1rem; }
+  .personal-dialog .dialog-heading { flex-wrap: wrap; padding: 1rem; }
+  .personal-dialog { width: calc(100vw - 1rem); }
+  .akten-felder { padding: .75rem; }
+  .akten-navigation .button { flex: 1 1 auto; }
+}
+
+.akten-fuss[hidden] { display: none; }

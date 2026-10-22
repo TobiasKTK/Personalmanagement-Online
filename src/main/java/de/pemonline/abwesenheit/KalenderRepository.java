@@ -16,7 +16,8 @@ public class KalenderRepository {
           AND h.gueltig_ab = COALESCE((SELECT MAX(h2.gueltig_ab) FROM mitarbeiter_historie h2 WHERE h2.mitarbeiter_id = m.id AND h2.gueltig_ab <= :ende),
                                      (SELECT MIN(h3.gueltig_ab) FROM mitarbeiter_historie h3 WHERE h3.mitarbeiter_id = m.id))
         LEFT JOIN organisationseinheit o ON o.id = CASE WHEN h.id IS NULL THEN m.organisationseinheit_id ELSE h.organisationseinheit_id END
-        WHERE m.eintrittsdatum <= :ende AND (m.austrittsdatum IS NULL OR m.austrittsdatum >= :beginn)
+        WHERE ((m.eintrittsdatum <= :ende AND (m.austrittsdatum IS NULL OR m.austrittsdatum >= :beginn))
+          OR EXISTS (SELECT 1 FROM beschaeftigungszeit b WHERE b.mitarbeiter_id = m.id AND b.beginn <= :ende AND b.ende >= :beginn))
           AND (:organisation IS NULL OR CASE WHEN h.id IS NULL THEN m.organisationseinheit_id ELSE h.organisationseinheit_id END = :organisation)
           AND LOCATE(LOWER(:suche), LOWER(CONCAT_WS(' ', m.name, m.personalnummer))) > 0
         """;

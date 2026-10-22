@@ -51,7 +51,7 @@ test('Planung pflegen, Stellvertretung benachrichtigen, Warnung bestätigen und 
     await vert.getByRole('button', { name: 'Benachrichtigungen: 1 ungelesen' }).click();
     await expect(vert.getByText('Neuer Urlaubsantrag zur Freigabe.', { exact: true })).toBeVisible();
     await vert.screenshot({ path: testInfo.outputPath('benachrichtigungen.png'), fullPage: true });
-    await vert.getByRole('button', { name: 'Antrag öffnen', exact: true }).click(); await expect(vert.locator('.management-list')).toContainText('Lena Ausbau');
+    await vert.getByRole('button', { name: 'Antrag öffnen', exact: true }).click(); await expect(vert.getByRole('list', { name: 'Urlaubsanträge', exact: true })).toContainText('Lena Ausbau');
     await expect(vert.getByRole('button', { name: 'Benachrichtigungen: 0 ungelesen' })).toBeVisible();
     await vert.getByRole('button', { name: 'Genehmigen', exact: true }).click(); await expect(vert.getByRole('alert')).toContainText('an 1 Tag(en)');
     await expect(vert.getByRole('button', { name: 'Entscheidung bestätigen' })).toBeDisabled();

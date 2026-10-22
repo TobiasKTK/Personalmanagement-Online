@@ -12,7 +12,7 @@ import { ActivatedRoute } from '@angular/router';
 import { DownloadService } from '../shared/download.service';
 interface Antrag { id: number; mitarbeiterId: number; name: string; beginn: string; ende: string; halberTag: boolean; status: string; notiz: string; entscheidung: string; bearbeiter: string | null; version: number; }
 interface Besetzung { warnungen: { datum: string; organisation: string; vorher: number; danach: number; mindestbesetzung: number }[]; hinweise: string[]; }
-@Component({ selector: 'app-urlaub', standalone: true, imports: [FormsModule, DatePipe, UrlaubskontoComponent], templateUrl: './urlaub.component.html' })
+@Component({ selector: 'app-urlaub', standalone: true, imports: [FormsModule, DatePipe, UrlaubskontoComponent], templateUrl: './urlaub.component.html', styleUrl: './urlaub.component.css' })
 export class UrlaubComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
@@ -23,6 +23,7 @@ export class UrlaubComponent implements OnInit {
   readonly sitzung = inject(SitzungService).sitzung;
   readonly profil = signal<UrlaubZuordnung | null>(null);
   readonly antraege = signal<Antrag[]>([]);
+  readonly detailAntrag = signal<Antrag | null>(null);
   readonly gesamt = signal(0);
   readonly fehler = signal('');
   readonly meldung = signal('');
@@ -64,6 +65,7 @@ export class UrlaubComponent implements OnInit {
   async beantragen(): Promise<void> {
     await this.ausfuehren(async () => { await firstValueFrom(mitFehlern(this.http.post('/api/urlaub/antraege', this.eingabe))); this.fokusId = null; this.eingabe = { beginn: '', ende: '', halberTag: false, notiz: '' }; this.freigaben = false; this.status = 'ALLE'; this.seite = 0; await this.datenLaden(); this.meldung.set('Urlaubsantrag eingereicht.'); });
   }
+  detailsAnzeigen(antrag: Antrag, dialog: HTMLDialogElement): void { this.detailAntrag.set(antrag); dialog.showModal(); }
   async vorbereiten(antrag: Antrag, aktion: string): Promise<void> {
     this.entscheidung = null;
     await this.ausfuehren(async () => {

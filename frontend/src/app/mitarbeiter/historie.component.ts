@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, input, signal } from '@angular/core';
+import { Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,6 +10,8 @@ interface Historie { id: number; gueltigAb: string; organisationseinheitId: numb
 export class HistorieComponent implements OnInit {
   private readonly http = inject(HttpClient);
   readonly person = input.required<number>();
+  readonly geaendert = output<void>();
+  readonly arbeitetGeaendert = output<boolean>();
   readonly eintraege = signal<Historie[]>([]);
   readonly organisationen = signal<Organisation[]>([]);
   readonly gesamt = signal(0);
@@ -21,8 +23,10 @@ export class HistorieComponent implements OnInit {
   mitarbeiterVersion = 0;
   bearbeitet: Historie | null = null;
   eingabe = { gueltigAb: heutigesDatum(), organisationseinheitId: null as number | null, wochenstunden: 40 };
+  private entwurfOriginal = JSON.stringify(this.eingabe);
+  entwurfGeaendert(): boolean { return JSON.stringify(this.eingabe) !== this.entwurfOriginal; }
   ngOnInit(): void { void this.laden(); }
-  bearbeiten(h?: Historie): void { this.bearbeitet = h ?? null; this.eingabe = h ? { gueltigAb: h.gueltigAb, organisationseinheitId: h.organisationseinheitId, wochenstunden: h.wochenstunden } : { gueltigAb: heutigesDatum(), organisationseinheitId: null, wochenstunden: 40 }; }
+  bearbeiten(h?: Historie): void { this.bearbeitet = h ?? null; this.eingabe = h ? { gueltigAb: h.gueltigAb, organisationseinheitId: h.organisationseinheitId, wochenstunden: h.wochenstunden } : { gueltigAb: heutigesDatum(), organisationseinheitId: null, wochenstunden: 40 }; this.entwurfOriginal = JSON.stringify(this.eingabe); }
   async laden(): Promise<void> { await this.ausfuehren(() => this.datenLaden()); }
   private async datenLaden(): Promise<void> {
     const [h, org] = await Promise.all([
@@ -36,18 +40,18 @@ export class HistorieComponent implements OnInit {
     await this.ausfuehren(async () => {
       const e = { ...this.eingabe, version: this.bearbeitet?.version, mitarbeiterVersion: this.mitarbeiterVersion };
       await firstValueFrom(mitFehlern(this.bearbeitet ? this.http.put(this.pfad() + '/' + this.bearbeitet.id, e) : this.http.post(this.pfad(), e)));
-      this.bearbeiten(); this.seite = 0; await this.datenLaden(); this.meldung.set('Historischer Stand gespeichert.');
+      this.bearbeiten(); this.seite = 0; await this.datenLaden(); this.meldung.set('Historischer Stand gespeichert.'); this.geaendert.emit();
     });
   }
   async loeschen(h: Historie): Promise<void> {
     if (!confirm('Diesen Stand entfernen? Der vorherige Stand gilt dann bis zum nächsten Eintrag weiter.')) return;
-    await this.ausfuehren(async () => { await firstValueFrom(mitFehlern(this.http.delete(this.pfad() + '/' + h.id, { params: { version: h.version, mitarbeiterVersion: this.mitarbeiterVersion } }))); this.bearbeiten(); await this.datenLaden(); this.meldung.set('Historischer Stand entfernt.'); });
+    await this.ausfuehren(async () => { await firstValueFrom(mitFehlern(this.http.delete(this.pfad() + '/' + h.id, { params: { version: h.version, mitarbeiterVersion: this.mitarbeiterVersion } }))); this.bearbeiten(); await this.datenLaden(); this.meldung.set('Historischer Stand entfernt.'); this.geaendert.emit(); });
   }
   private async ausfuehren(aktion: () => Promise<void>): Promise<void> {
     if (this.arbeitet()) return;
-    this.arbeitet.set(true); this.fehler.set(''); this.meldung.set('');
+    this.arbeitet.set(true); this.arbeitetGeaendert.emit(true); this.fehler.set(''); this.meldung.set('');
     try { await aktion(); } catch (e) { this.fehler.set(e instanceof ApiFehler ? [e.message, ...Object.values(e.felder)].join(' ') : e instanceof Error ? e.message : 'Historie konnte nicht verarbeitet werden.'); }
-    finally { this.arbeitet.set(false); }
+    finally { this.arbeitet.set(false); this.arbeitetGeaendert.emit(false); }
   }
   private pfad(): string { return `/api/mitarbeiter/${this.person()}/historie`; }
 }

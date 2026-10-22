@@ -17,6 +17,16 @@ cd pemonline
 .\Starten.ps1
 ```
 
+Die ausführliche Anleitung steht unter [Zum ersten Mal anmelden](#zum-ersten-mal-anmelden-schritt-für-schritt).
+
+**Alternative für bereits eingerichtete lokale Konten:** Der folgende Start verwendet die lokale Passwortanmeldung. Für die erste Einrichtung mit Keycloak die Anleitung oben verwenden.
+
+```powershell
+cd pemonline
+$env:PEM_ANMELDUNG = 'lokal'
+.\Starten.ps1
+```
+
 Nach der Meldung `Started PemonlineApplication` im Browser <http://127.0.0.1:8080> öffnen und **Mit Keycloak anmelden** wählen. Für die mitgelieferte lokale Umgebung lautet der Benutzername `admin`. Das zufällig erzeugte Startpasswort steht in der lokalen Datei `.env` unter `PEM_KEYCLOAK_APP_PASSWORD`; beim ersten Login muss es geändert werden. Die Datei `.env` wird nicht in Git aufgenommen.
 
 Das Repository enthält keine lokalen Betriebsdaten oder persönlichen Zugangsdaten. Die Anwendung speichert ihre Daten standardmäßig unter `%LOCALAPPDATA%/pemonline`; Keycloak verwendet das Docker-Volume `pemonline_keycloak-data`. Für eine getrennte Anwendungsdatenbank `Starten.ps1 -DatenVerzeichnis <eigener-leerer-Ordner>` verwenden. Weitere Hinweise stehen unter [Anmeldung und erste Einrichtung](#anmeldung-und-erste-einrichtung) und [Dauerhafte Daten und Sicherungen](#dauerhafte-daten-und-sicherungen).
@@ -32,6 +42,50 @@ Die Startübersicht trennt aktuelle Abwesenheiten, Freigaben und den eigenen Url
 Gemeinsame Farben, Abstände, Rundungen und die Schriftfamilie stehen in `src/main/resources/static/anmeldung/design-tokens.css`. Anmeldung und Angular importieren dieselben Werte. Wiederkehrende Komponenten werden in `frontend/src/styles.css`, der Anwendungsrahmen in `frontend/src/styles/shell.css` gestaltet. `frontend/tests/ui-design.spec.ts` prüft die Fachansichten bei 320, 768, 1024 und 1440 Pixeln sowie das mobile Menü, Tastaturbedienung, den Mitarbeiterdialog und die leere Suche. Die Browsertests erzeugen Screenshots im jeweiligen `frontend/test-results`-Unterordner.
 
 ## Anmeldung und erste Einrichtung
+
+### Zum ersten Mal anmelden: Schritt für Schritt
+
+Diese Anleitung gilt für eine neue lokale Installation unter Windows mit den mitgelieferten Standardeinstellungen.
+
+1. **Voraussetzungen installieren und Docker starten.** Benötigt werden JDK 25 oder neuer, Git, PowerShell und Docker Desktop mit Compose. Docker Desktop öffnen und warten, bis Docker läuft. Für die Downloads beim ersten Start ist Internetzugriff erforderlich.
+
+2. **Projekt herunterladen und eine PowerShell im Projektordner öffnen.** Zum Klonen diese Befehle ausführen:
+
+   ```powershell
+   git clone https://github.com/TobiasKTK/Personalmanagement-Online.git pemonline
+   cd pemonline
+   ```
+
+   Wer das Projekt bereits heruntergeladen hat, öffnet die PowerShell direkt in dem Ordner, der `Keycloak.ps1` und `Starten.ps1` enthält.
+
+3. **Den Anmeldedienst starten.** In dieser PowerShell ausführen:
+
+   ```powershell
+   $env:PEM_ANMELDUNG = 'keycloak'
+   .\Keycloak.ps1
+   ```
+
+   Auf die Meldung `Keycloak ist bereit.` warten. Das Skript erzeugt beim ersten Aufruf die Datei `.env` im Projektordner mit zufälligen Startpasswörtern. Die Einstellung `PEM_ANMELDUNG` gilt für dieses PowerShell-Fenster.
+
+4. **Das Startpasswort nachsehen.** Die Datei `.env` in einem Texteditor öffnen und die Zeile mit `PEM_KEYCLOAK_APP_PASSWORD` suchen. Das Passwort ist der vollständige Wert rechts vom `=` **ohne die umschließenden einfachen Anführungszeichen**. Diese Datei bleibt lokal und wird von Git ausgeschlossen. Für die Anmeldung an pemonline wird der Benutzername **`admin`** verwendet; `PEM_KEYCLOAK_ADMIN_PASSWORD` gehört zum separaten Konto `keycloak-admin` für die Keycloak-Verwaltung.
+
+5. **pemonline starten.** Im selben PowerShell-Fenster ausführen:
+
+   ```powershell
+   .\Starten.ps1
+   ```
+
+   Beim ersten Start werden Maven, Node.js und weitere Abhängigkeiten heruntergeladen und die Anwendung gebaut. Erst nach der Meldung `Started PemonlineApplication` ist sie bereit. Das PowerShell-Fenster geöffnet lassen; mit **Strg+C** wird pemonline beendet.
+
+6. **Im Browser anmelden.** <http://127.0.0.1:8080> öffnen und **Mit Keycloak anmelden** wählen. Im Keycloak-Anmeldeformular als Benutzername **`admin`** und als Passwort den Wert aus `PEM_KEYCLOAK_APP_PASSWORD` eingeben. Während der Anmeldung durchgehend `127.0.0.1` verwenden.
+
+7. **Ein eigenes Passwort festlegen.** Beim ersten Login fordert Keycloak zur Passwortänderung auf. Das neue Passwort eingeben, bestätigen und speichern. Danach führt die Anmeldung zurück zu pemonline. Für spätere Logins gilt das neue Passwort; der Wert in `.env` bleibt das ursprüngliche Startpasswort und wird dabei nicht aktualisiert.
+
+8. **Die eigene Installation einrichten.** Das erste Konto `admin` erhält Administrations- und Systemverwaltungsrechte. Bei einer neuen Datenbank ist die Firma **Bestehende Firma** angelegt; sie kann unter **Firmen → Verwaltung** umbenannt werden. Mitarbeiter und weitere Daten können anschließend angelegt werden. Die bisherigen Testdaten des Projektentwicklers werden beim Herunterladen nicht übernommen.
+
+Für spätere Starts Docker Desktop öffnen und im Projektordner wieder `.\Keycloak.ps1` und anschließend `.\Starten.ps1` ausführen. Vorhandene Konten, Passwörter und Daten bleiben dabei erhalten.
+
+### Anmeldeverfahren und Konfiguration
 
 Die Anmeldung erfolgt standardmäßig über **Keycloak** mit OpenID Connect (Authorization Code und PKCE/S256). Unter `/login` führt **Mit Keycloak anmelden** zum zentralen Anmeldeformular. Passwörter, E-Mail-Adressen, Passwortzurücksetzen und gegebenenfalls Mehrfaktor-Anmeldung verwaltet Keycloak. Die Anwendung erhält keine Benutzerpasswörter. Tokens bleiben auf dem Server; Angular verwendet weiterhin ein HttpOnly-Sitzungscookie.
 
@@ -50,7 +104,7 @@ Keycloak speichert seine Daten im Docker-Volume `pemonline_keycloak-data`. `.\Ke
 
 **Bestehende Konten übernehmen:** Kontonamen, Rollen, Firmenzugänge und Mitarbeiterzuordnungen bleiben erhalten. Es gibt keine automatische Passwortmigration. In Keycloak für jede Person ein Benutzerkonto erstellen, ein neues Passwort bzw. eine Einladung einrichten und dessen Attribut **pemonline-Kontoname** (`pemonline_konto`) auf den exakten bestehenden Kontonamen setzen. Nur die Keycloak-Administration darf dieses Attribut bearbeiten. Bei einem bisherigen Administrator mit anderem Namen als `admin` muss die Zuordnung entsprechend angepasst werden. `MITARBEITER_ADMIN_NAME` wird nur bei einer leeren pemonline-Datenbank ausgewertet (Standard `admin`); im Keycloak-Modus wird kein lokales Passwort benötigt oder erzeugt.
 
-**Neue Zugänge:** Unter **Konten → Firmenzugänge** Name, Rolle und Aktivierung anlegen. Danach das Keycloak-Benutzerkonto über `pemonline_konto` zuordnen. Jeder pemonline-Kontoname darf nur einer Person zugeordnet werden. Der signierte ID-Token muss diesen einzelnen String enthalten. Fehlende, unbekannte, gesperrte Konten oder Konten ohne aktiven Firmenzugang (und ohne Systemverwaltungsrechte) werden abgewiesen. E-Mail-Adressen, `preferred_username` und Keycloak-Rollen verleihen keine pemonline-Rechte. Die mitgelieferte Realm-Konfiguration schützt das Zuordnungsattribut vor Benutzeränderungen und deaktiviert Selbstregistrierung sowie Passwort- und Implicit-Grant.
+**Neue Zugänge:** Unter **Benutzer & Zugänge → Benutzerkonto anlegen** Name, Rolle und Aktivierung für die aktuelle Firma festlegen. Danach das Keycloak-Benutzerkonto über `pemonline_konto` zuordnen. Jeder pemonline-Kontoname darf nur einer Person zugeordnet werden. Der signierte ID-Token muss diesen einzelnen String enthalten. Fehlende, unbekannte, gesperrte Konten oder Konten ohne aktiven Firmenzugang (und ohne Systemverwaltungsrechte) werden abgewiesen. E-Mail-Adressen, `preferred_username` und Keycloak-Rollen verleihen keine pemonline-Rechte. Die mitgelieferte Realm-Konfiguration schützt das Zuordnungsattribut vor Benutzeränderungen und deaktiviert Selbstregistrierung sowie Passwort- und Implicit-Grant.
 
 **Verbindung konfigurieren:** `PEM_KEYCLOAK_ISSUER` (Standard `http://127.0.0.1:8180/realms/pemonline`), `PEM_KEYCLOAK_CLIENT_ID` (Standard `pemonline`) und optional `PEM_KEYCLOAK_CLIENT_SECRET` für einen vertraulichen Client. Der lokale Client ist öffentlich und erzwingt PKCE. Andere Hosts/Ports, etwa `Starten.ps1 -Port 8082` oder Angular auf Port 4200, benötigen in Keycloak unter Clients → pemonline die jeweilige exakte Redirect-URI `http://127.0.0.1:PORT/login/oauth2/code/keycloak` und Post-Logout-URI `http://127.0.0.1:PORT/login?abgemeldet`. Browser und Konfiguration müssen denselben Host verwenden, also nicht zwischen `localhost` und `127.0.0.1` wechseln.
 
@@ -62,7 +116,7 @@ Beispiel: pemonline-Kontoname `personalverwaltung`, Rolle **Personalverwaltung**
 | --- | --- |
 | Lesen | Mitarbeiter, gefilterte Statistiken, Organisationseinheiten, Teamkalender und Startübersicht lesen; eigene Urlaubsanträge, Benachrichtigungen und eigenen ICS-Export nutzen |
 | Personalverwaltung | Zusätzlich Mitarbeiter, Urlaubskonten und Abwesenheiten pflegen; zuständige Anträge entscheiden; Verlauf lesen und gefilterte Teamdaten exportieren |
-| Administration | Zusätzlich Organisationseinheiten, lokale Konten, Mitarbeiterkontenzuordnung, Vertretungen, Feiertagskalender und Besetzungsregeln verwalten |
+| Administration | Zusätzlich Organisationseinheiten, Firmenzugänge, Mitarbeiterkontenzuordnung, Vertretungen, Feiertagskalender und Besetzungsregeln verwalten |
 
 Zugriffe werden serverseitig sowohl an den HTTP-Endpunkten als auch an den geschützten Service-Methoden geprüft. Schreibende Anfragen einschließlich Logout benötigen einen CSRF-Nachweis. Angular sendet ihn über `X-XSRF-TOKEN`; den OIDC-Login schützen State, Nonce und PKCE. Das Sitzungscookie verwendet `SameSite=Lax`, damit der Rücksprung von Keycloak funktioniert. Die Anwendung bleibt standardmäßig auf `127.0.0.1` beschränkt. Für Betrieb über HTTPS `MITARBEITER_HTTPS=true` setzen. Eine externe Veröffentlichung benötigt eine passende HTTPS-Bereitstellung; diese ist nicht Teil der lokalen Anwendung.
 
@@ -120,10 +174,11 @@ Das Profil `konto-pruefung` hält die Java-Buildartefakte getrennt von einer lau
 
 Mehrere Firmen verwenden **eine gemeinsame H2-Datenbankdatei**, besitzen aber getrennte Datenbestände mit einer dauerhaften **Mandantenspeicher-ID**. Ein Konto kann mehreren Firmen zugeordnet sein und in jeder Firma eine andere Rolle haben. Kontonamen sind über alle Firmen hinweg eindeutig; eine erneute Anlage desselben Namens wird auch bei gleichzeitigen Anfragen abgewiesen.
 
-1. Unter **Firmen verwalten** eine Firma anlegen oder umbenennen. Neue Firmen starten mit einem leeren Datenbestand; das anlegende Systemverwaltungskonto erhält dort Administrationsrechte.
-2. Unter **Firma wechseln** die Firma auswählen. Die Kopfzeile zeigt Firmenname und Mandantenspeicher-ID. Bei einer neuen Anmeldung wird zunächst die zugängliche Firma mit der kleinsten ID geöffnet.
-3. Unter **Konten** ein neues, global eindeutiges Konto für die aktuelle Firma anlegen und in Keycloak zuordnen. Unter **Firmen verwalten → Firmenzugang zuordnen** ein vorhandenes Konto weiteren Firmen mit jeweils eigener Rolle und Aktivierung zuordnen.
-4. Die **Systemverwaltung** verwaltet Firmen, Zuordnungen und zentrale Konten. **Administration** verwaltet fachliche Daten und Kontenzugänge in der ausgewählten Firma. Passwörter werden bei Keycloak verwaltet. Nur im ausdrücklich eingeschalteten lokalen Modus setzt die pemonline-Systemverwaltung firmenübergreifende Passwörter zurück.
+1. Unter **Firmen → Verwaltung** eine Firma anlegen oder umbenennen. Der Bereich **Verwaltung** ist nur für die Systemverwaltung sichtbar. Neue Firmen starten mit einem leeren Datenbestand; das anlegende Systemverwaltungskonto erhält dort Administrationsrechte.
+2. Unter **Firmen → Firma auswählen** die Firma auswählen; die aktive Firma ist hervorgehoben. Die Anzeige **Aktuelle Firma** in der Kopfzeile führt ebenfalls direkt zur Auswahl und zeigt Firmenname und Mandantenspeicher-ID. Benutzer ohne Systemverwaltungsrechte gelangen unter **Firmen** direkt zur Auswahl ihrer freigegebenen Firmen. Bei einer neuen Anmeldung wird zunächst die zugängliche Firma mit der kleinsten ID geöffnet.
+3. Unter **Benutzer & Zugänge** ein neues, global eindeutiges Konto für die aktuelle Firma anlegen und in Keycloak zuordnen. Die Systemverwaltung sieht hier jedes Konto mit allen Firmenzugängen. Über **Konto … bearbeiten** oder **Zugang … bearbeiten** lassen sich globale Kontoeinstellungen und die jeweilige Firmenzuordnung pflegen; die Auswahl einer weiteren Firma vergibt einen zusätzlichen Zugang mit eigener Rolle und Aktivierung. Konto und Firmenzugang werden getrennt gespeichert. Die Bearbeitung bleibt danach geöffnet, sodass ungespeicherte Eingaben im jeweils anderen Formular erhalten bleiben.
+4. **Administration** sieht unter **Benutzer & Zugänge** nur die Kontenzugänge der ausgewählten Firma. Die **Systemverwaltung** kann dort auch ohne aktiven Firmenzugang vorhandene Konten und Zuordnungen verwalten. Zur Neuanlage eines Kontos wird eine Firma mit Administrationsrechten benötigt. **Firmen → Verwaltung** enthält nur Firmenanlage, Umbenennung und gegebenenfalls das Fortsetzen einer unvollständigen Einrichtung. Der bisherige Direktlink `/administration/mandanten` führt weiterhin zur Firmenverwaltung.
+5. Passwörter und E-Mail-Adressen werden bei Keycloak verwaltet; die Kontenverwaltung zeigt dafür keine Passwortfelder. Im ausdrücklich eingeschalteten lokalen Modus gilt ein Passwort für alle Firmen. Passwörter firmenübergreifender Konten setzt nur die pemonline-Systemverwaltung zurück.
 
 Bei der Umstellung wird der vorhandene Bestand als **Bestehende Firma**, ID **1**, übernommen. Bestehende Kontonamen, Passworthashes, Rollen, Mitarbeiter-IDs und Fachdatensätze bleiben erhalten. Bisherige Administrationskonten erhalten zusätzlich Systemverwaltungsrechte; bei einer leeren Datenbank erhält sie das erste Bootstrap-Konto. Später angelegte Firmenadministratoren erhalten diese globalen Rechte nicht automatisch. Eine globale Kontosperre sperrt alle Firmenzugänge; eine lokale Sperre nur den jeweiligen Firmenzugang. Änderungen an Zugängen, Rollen oder Passwörtern beenden die betroffenen Sitzungen. Ein Systemverwaltungskonto kann sich nicht selbst global sperren oder seine Systemverwaltungsrechte entfernen.
 
@@ -149,6 +204,24 @@ Alle Schreibaufrufe benötigen weiterhin CSRF. Ohne zugeordneten Firmenzugang ge
 
 Sicherung und Wiederherstellung umfassen **immer alle Firmen und globalen Konten gemeinsam** in derselben H2-Datei. Eine einzelne Firma wird durch `Sicherung.ps1` nicht separat wiederhergestellt. Beim Beispieldatenimport mit mehreren Firmenzugängen muss die Zielfirma ausdrücklich angegeben werden, z. B. `.\Beispieldaten.ps1 -MandantenspeicherId 2`; der Bericht enthält ID und Firmenname.
 
+## Personaldaten in der Teamansicht
+
+Unter **Teamübersicht → Personaldaten** stehen Bankverbindung, fachliche und disziplinarische Leitungsfunktion, Kostenstellenverteilung, Vertretungen und Schwerbehindertendaten bereit. Weitere Bereiche bieten Stellenprofil- und Organisationszuordnung, die vorhandene Planstellenverwaltung, frühere Beschäftigungszeiten und Wiedereintritt einschließlich Austrittsgrund und Kündigungsdatum sowie datierte Vergütungsstände mit Lohnarten.
+
+Lohn- und Gehaltsdokumente lassen sich als PDF importieren, direkt ansehen und herunterladen. Die Quelle **Agenda Lohn- und Gehaltsabrechnung** kennzeichnet den manuellen PDF-Import. Gespeicherte Personalstände bleiben in der Historie mit Zeitpunkt und Bearbeiter einsehbar; Organisation und Arbeitszeit nutzen zusätzlich den bestehenden zeitlichen Verlauf.
+
+Zugriff haben Personalverwaltung und Administration innerhalb ihrer Firma. Migration **V15__personaldaten.sql** ergänzt die Speicherung und erhält bestehende Daten. Die Betriebszugehörigkeit zählt erreichte Kalendertage über alle Beschäftigungszeiten; Unterbrechungen zählen nicht. Einzelheiten und Prüfungen: [Personaldaten](docs/personaldaten.md).
+
+## Erweiterte Personaldaten
+
+Unter **Teamübersicht → Personaldaten → Ergänzungen** pflegen Personalverwaltung und Administration mehrere strukturierte Einträge für interne, geschäftliche und Notfallkontakte, Vollmachten, Kostenträger, Beauftragungen, Schul-/Berufs-/Hochschulbildung, betriebliche Fortbildungen sowie Dienstwagen und Dienstfahrräder. Zeiträume können offen bleiben; beendete Zuordnungen lassen sich mit Enddatum erhalten. Ausbildungspläne und Kenntnisnachweise sind über die jeweiligen Bereiche erreichbar. Kostenstellen bleiben unter Stammdaten.
+
+**Ergänzungen speichern** übernimmt alle acht Listen. Bereichswechsel erhalten den Entwurf; bei ungespeicherten Änderungen fragt der Dialog vor dem Schließen nach. Fehler und parallele Änderungen überschreiben die Eingaben nicht. Nach einem Versionskonflikt den aktuellen Stand über **Ergänzungen neu laden** einlesen und die eigenen Änderungen erneut prüfen.
+
+Das **Vollzeitäquivalent (FTE)** wird aus den am heutigen Stichtag gültigen Wochenstunden geteilt durch die Vollzeitbasis der Firma berechnet. Anfangswert je Firma: **40 Stunden**, durch Administration unter **Vollzeitbasis der Firma ändern** einstellbar. Beispiel: 32 / 40 = 0,80 FTE. Eine geänderte Basis gilt für alle Mitarbeiter dieser Firma und wird getrennt gespeichert. FTE ist ein vertraglicher Arbeitszeitanteil, keine Anwesenheits- oder Abrechnungskennzahl. Geplante zukünftige Stunden ersetzen keine noch unbekannte aktuelle Arbeitszeit; Werte über 1,0 werden nicht gekürzt.
+
+Die Migration **V16__erweiterte_personaldaten.sql** ergänzt je Firmenschema zwei Tabellen und erhält vorhandene Personen-, Bank- und Vergütungsdaten. Sie wird beim nächsten regulären Start angewendet. Technischer Vertrag, Rechte und Prüfungen: [Personaldaten-Erweiterung](docs/personaldaten-erweiterung-technik.md).
+
 ## Neue Funktionen
 
 ### Organisationsstruktur, Stellen, Kenntnisse und Ausbildung
@@ -159,7 +232,7 @@ Die Navigation bietet **Organisationsstruktur** (`/organisation`), **Stellen und
 
 Unter **Organisationsstand** stehen vollständige, schreibgeschützte Momentaufnahmen mit Zeitpunkt, Bearbeiter und Änderungsbeschreibung zur Verfügung; ältere Stände lassen sich in Seiten zu je 50 Einträgen laden. Sie enthalten die damaligen Namen und Hierarchien, auch für inzwischen gelöschte Einheiten. Die Historie startet mit dem bei Einführung vorhandenen Bestand. Frühere Organisationsstrukturen werden nicht rekonstruiert. Änderungen gelten sofort; zukünftige oder rückwirkende Wirksamkeitsdaten sowie das automatische Wiederherstellen eines alten Standes sind nicht enthalten. Die bestehende Mitarbeiterhistorie bleibt davon unabhängig und verwendet weiterhin aktuelle Organisationsnamen.
 
-**Stellenkatalog und Planstellen:** Ein Stellenprofil enthält Beschreibung, Aufgaben und strukturierte Anforderungen aus dem Kenntniskatalog: Soll-Kenntnisse, Kompetenzen, Sprachen, IT-Kenntnisse, Ausbildungsabschlüsse, Bescheinigungen/Zertifikate und Pflichtfortbildungen. Je Anforderung wird ein Soll-Niveau von 1 bis 5 festgelegt. Eine Planstelle verweist auf eine Organisationseinheit und ein Stellenprofil, hat einen Stellenanteil von 0,01 bis 1,00 und kann unbesetzt oder einer Person zugeordnet sein. Mehrere Planstellen je Person sind möglich, ihre Anteile dürfen zusammen höchstens 1,00 ergeben. Dieser Anteil ist eine Planungsgröße und wird nicht aus den Wochenstunden berechnet. Die Besetzung ändert weder die Mitarbeiterabteilung noch das bisherige Freitextfeld „Stelle“. Verwendete Profile und Kenntnisse sind gegen Löschen geschützt.
+**Stellenkatalog und Planstellen:** Ein Stellenprofil enthält Beschreibung, Aufgaben und strukturierte Anforderungen aus dem Kenntniskatalog: Soll-Kenntnisse, Kompetenzen, Sprachen, IT-Kenntnisse, Ausbildungsabschlüsse, Bescheinigungen/Zertifikate und Pflichtfortbildungen. Gespeicherte Profile erscheinen als kompakte Kacheln. Ein Klick auf „Details ansehen“ öffnet Stellenbeschreibung, Aufgaben und Anforderungen vollständig in einem Dialog; über „Stellenprofil bearbeiten“ gelangt man zum ausgefüllten Formular. Der Dialog lässt sich mit „Schließen“ oder Escape schließen. Je Anforderung wird ein Soll-Niveau von 1 bis 5 festgelegt. Eine Planstelle verweist auf eine Organisationseinheit und ein Stellenprofil, hat einen Stellenanteil von 0,01 bis 1,00 und kann unbesetzt oder einer Person zugeordnet sein. Mehrere Planstellen je Person sind möglich, ihre Anteile dürfen zusammen höchstens 1,00 ergeben. Dieser Anteil ist eine Planungsgröße und wird nicht aus den Wochenstunden berechnet. Die Besetzung ändert weder die Mitarbeiterabteilung noch das bisherige Freitextfeld „Stelle“. Verwendete Profile und Kenntnisse sind gegen Löschen geschützt.
 
 **Kenntnisse und Schulungsbedarf:** Zuerst Kenntnisse im Katalog anlegen, anschließend bei einer Person Niveau, Erwerbsdatum, optionales Gültigkeitsende und Nachweistext bzw. Zertifikatsnummer erfassen. Die Skala bedeutet 1 Grundlagen, 2 Basis, 3 selbstständig, 4 fortgeschritten, 5 Experte. Für reine Abschluss- und Teilnahmebescheinigungen kann Niveau 1 als vorhanden verwendet werden. Ein nicht erfasster Wert bleibt unbekannt. Pro Person und Kenntnis gibt es einen aktuellen Nachweis, der bei einer Erneuerung bearbeitet wird; Dateianhänge und eine Historie früherer Nachweisfassungen sind nicht enthalten.
 
@@ -201,11 +274,11 @@ PUT benötigt die zuletzt gelesene `version`, DELETE den Anfrageparameter `versi
 
 Die Navigation enthält **Teamkalender** (`/kalender`) sowie **Urlaub und Freigaben** (`/urlaub`). Beim Öffnen von „Urlaub und Freigaben“ werden offene Anträge (Status **Beantragt**) automatisch geladen. Bei Personal- und Administrationskonten ist **Zuständige Freigaben anzeigen** bereits aktiviert; Lesekonten sehen ihre eigenen offenen Anträge. Im Mitarbeiterdialog sind Urlaubskonto, Benutzerzuordnung und Abteilungs-/Arbeitszeitverlauf als aufklappbare Bereiche erreichbar.
 
-1. **Teamkalender:** Monatsansicht mit Abteilungsfilter, 20 Personen je Seite, Abwesenheitsarten und Kennzeichnung halber Urlaubstage. Direkt unter „Mitarbeiter“ sucht ein Eingabefeld nach Namen oder Personalnummern, unabhängig von Groß-/Kleinschreibung. Die Suche aktualisiert den Kalender nach kurzer Tipp-Pause (oder mit Enter), berücksichtigt alle Seiten und lässt sich mit Monat und Abteilung kombinieren. Leeren des Suchfelds zeigt wieder alle passenden Mitarbeiter. Monatsübergreifende Abwesenheiten erscheinen in jedem betroffenen Monat. Die Abteilungszuordnung für Filter und Zeilenbeschriftung gilt zum Monatsende. Ein Klick auf den Namen öffnet den Mitarbeiterdialog.
+1. **Teamkalender:** Monatsansicht mit Abteilungsfilter, 20 Personen je Seite, Abwesenheitsarten und Kennzeichnung halber Urlaubstage. Die Pfeile neben dem Monatsfeld zeigen sofort den vorherigen bzw. nächsten Monat, auch über den Jahreswechsel hinweg. Suche und Abteilungsfilter bleiben dabei erhalten, die Mitarbeiterliste beginnt wieder auf Seite 1. Direkt unter „Mitarbeiter“ sucht ein Eingabefeld nach Namen oder Personalnummern, unabhängig von Groß-/Kleinschreibung. Die Suche aktualisiert den Kalender nach kurzer Tipp-Pause (oder mit Enter), berücksichtigt alle Seiten und lässt sich mit Monat und Abteilung kombinieren. Leeren des Suchfelds zeigt wieder alle passenden Mitarbeiter. Monatsübergreifende Abwesenheiten erscheinen in jedem betroffenen Monat. Personalverwaltung und Administration können eine Abwesenheit durch Anklicken eines belegten Tages markieren (per Tastatur mit Tab und Enter/Leertaste). Markiert wird der gesamte Eintrag; Name, Art und vollständiger Zeitraum erscheinen oberhalb der Tabelle. **Abwesenheit löschen** entfernt ihn nach Bestätigung, auch außerhalb des angezeigten Monats. **Auswahl aufheben**, ein erneuter Klick oder ein Wechsel von Monat, Filter oder Seite hebt die Markierung auf. Genehmigter Urlaub aus einem Antrag wird weiterhin unter **Urlaub und Freigaben** storniert; ein direkter Löschversuch zeigt den entsprechenden Hinweis. Die Abteilungszuordnung für Filter und Zeilenbeschriftung gilt zum Monatsende. Ein Klick auf den Namen öffnet den Mitarbeiterdialog.
 2. **Urlaubskonto einrichten:** Personalverwaltung oder Administration wählt im Mitarbeiterdialog das Jahr und trägt Jahresanspruch, bestätigten Übertrag, regelmäßige Arbeitstage und Feiertage/zusätzliche freie Tage ein. Arbeitstage werden ausdrücklich als Wochentage ausgewählt; Wochenstunden allein bestimmen keinen Urlaubsverbrauch. Ein zentraler Feiertagskalender für Standort und Jahr kann zugeordnet und um individuelle freie Tage oder Ausnahmen ergänzt werden. Es werden keine regionalen Feiertage automatisch geladen. Ganze und halbe Tage sind möglich.
 3. **Übertrag:** Der bestätigte Übertrag erhöht das Kontingent des gewählten Jahres. „Resturlaub aus Vorjahr übernehmen“ übernimmt den Rest eines eingerichteten Vorjahres ohne offene Anträge zunächst ins Eingabefeld; erst Speichern bestätigt ihn. Wiederholtes Speichern ersetzt den Wert und addiert ihn nicht erneut. Spätere Änderungen im Vorjahr erfordern einen erneuten Abgleich. Es gibt keine automatische Verfallsregel, anteilige Anspruchsberechnung oder unbeaufsichtigte Übertragung.
 4. **Konto und Freigabe zuordnen:** Die Administration verknüpft im Mitarbeiterdialog ein aktives Benutzerkonto mit genau einem Mitarbeiter. Je Mitarbeiter gilt entweder **Zugeordneter Genehmiger** (aktives Konto mit Personal-/Administrationsrechten) oder **Alle mit Personal- oder Administrationsrechten**. Im zugeordneten Modus besitzen andere Administratoren keine automatische Freigabeberechtigung; sie können die Zuordnung ändern. Eine geänderte Zuständigkeit gilt auch für offene Anträge. Wird ein Genehmigerkonto gesperrt oder verliert seine Rolle, muss die Administration die Zuordnung anpassen.
-5. **Urlaub beantragen und entscheiden:** Das verknüpfte Konto beantragt unter „Urlaub und Freigaben“ Urlaub für die eigene Person. Auch die Rolle Lesen darf eigene Anträge stellen, das eigene Urlaubskonto lesen und eigene offene Anträge zurückziehen. Personal-/Administrationskonten können über „Zuständige Freigaben anzeigen“ die für sie bestimmten Anträge genehmigen oder ablehnen. Selbstgenehmigung ist ausgeschlossen. Eine Genehmigung bucht die Abwesenheit und beendet die Reservierung in derselben Transaktion. Genehmigten Urlaub kann der zuständige Genehmiger stornieren; die eigene Person kann dies bis einschließlich des ersten Urlaubstags. Vergangene Urlaube können nur berechtigte Genehmiger stornieren. Die gebuchte Abwesenheit wird ausschließlich über den Antrag storniert und ist gegen direkte Änderungen/Löschungen geschützt.
+5. **Urlaub beantragen und entscheiden:** Das verknüpfte Konto beantragt unter „Urlaub und Freigaben“ Urlaub für die eigene Person. Eigene Anträge und zuständige Freigaben erscheinen als Kacheln mit Name, Zeitraum, Status und gegebenenfalls einem Hinweis auf einen halben Tag. „Details ansehen“ öffnet die vollständige Notiz sowie Bearbeiter und Entscheidungsbegründung in einem Dialog. Die verfügbaren Aktionen stehen direkt an der Kachel. Auch die Rolle Lesen darf eigene Anträge stellen, das eigene Urlaubskonto lesen und eigene offene Anträge zurückziehen. Personal-/Administrationskonten können über „Zuständige Freigaben anzeigen“ die für sie bestimmten Anträge genehmigen oder ablehnen. Selbstgenehmigung ist ausgeschlossen. Eine Genehmigung bucht die Abwesenheit und beendet die Reservierung in derselben Transaktion. Genehmigten Urlaub kann der zuständige Genehmiger stornieren; die eigene Person kann dies bis einschließlich des ersten Urlaubstags. Vergangene Urlaube können nur berechtigte Genehmiger stornieren. Die gebuchte Abwesenheit wird ausschließlich über den Antrag storniert und ist gegen direkte Änderungen/Löschungen geschützt.
 6. **Historische Stände:** Personalverwaltung und Administration erfassen im Mitarbeiterdialog Organisationseinheit und Wochenstunden mit **Gültig ab**. Ein Stand gilt bis vor den nächsten Eintrag; pro Person und Datum gibt es höchstens einen Stand. Korrektur und Entfernen sind möglich, mindestens ein Ausgangsstand bleibt erhalten. Zukünftige Änderungen werden am Datum durch die Stichtagsabfrage wirksam, ohne täglichen Hintergrundjob. Änderungen an den normalen Mitarbeiterfeldern Organisation/Wochenstunden gelten ab heute bzw. bei künftigem Eintritt ab dem Eintritt; für andere Wirksamkeitsdaten den Historienbereich verwenden. Mehrere Änderungen am selben Tag aktualisieren denselben Stand, bleiben aber im Änderungsverlauf nachvollziehbar. Bearbeiten aus einer historischen Teamansicht lädt stets den aktuellen Datensatz.
 
 **Berechnung:** Anspruch + Übertrag − genommen − geplant = Resturlaub; Resturlaub − offene Anträge = verfügbar. Urlaub vor heute zählt als genommen, ab heute als geplant. Nur konfigurierte Arbeitstage außerhalb der eingetragenen Feiertage werden gezählt. Ein halber Urlaubstag benötigt dasselbe Beginn-/Enddatum und zählt 0,5 Tage. Es gibt keine Vormittag-/Nachmittagsteilung; überlappende Einträge am selben Tag bleiben ausgeschlossen. Jahresübergreifende Anträge belasten jedes Jahr getrennt und benötigen für alle betroffenen Jahre ein Urlaubskonto. Neue Anträge beginnen frühestens heute und umfassen höchstens 367 Kalendertage. Ein Antrag ohne Arbeitstag wird abgewiesen.

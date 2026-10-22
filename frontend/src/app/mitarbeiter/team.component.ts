@@ -11,14 +11,16 @@ import { FormsModule } from '@angular/forms';
 import { Filter, Organisation, heutigesDatum } from '../shared/model';
 
 import { MitarbeiterDetailsComponent } from '../abwesenheit/mitarbeiter-details.component';
+import { PersonaldatenComponent } from '../personaldaten/personaldaten.component';
 
 @Component({
   selector: 'app-team',
   standalone: true,
-  imports: [MitarbeiterEditorComponent, FormsModule, MitarbeiterDetailsComponent],
+  imports: [MitarbeiterEditorComponent, FormsModule, MitarbeiterDetailsComponent, PersonaldatenComponent],
   templateUrl: './team.component.html',
 })
 export class TeamComponent implements OnInit {
+  private readonly element: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly api = inject(MitarbeiterApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly zahlen = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 });
@@ -30,6 +32,8 @@ export class TeamComponent implements OnInit {
 
   @ViewChild('loeschdialog') private loeschdialog!: ElementRef<HTMLDialogElement>;
   @ViewChild(MitarbeiterEditorComponent) private editor?: MitarbeiterEditorComponent;
+  @ViewChild(PersonaldatenComponent) private personaldatenDialog?: PersonaldatenComponent;
+  readonly personaldaten = signal<Mitarbeiter | null>(null);
 
   readonly groesse = 10;
   readonly seite = signal(0);
@@ -85,7 +89,13 @@ export class TeamComponent implements OnInit {
     });
   }
   verlassenErlauben(): boolean | Promise<boolean> {
-    return this.editor?.verlassenErlauben() ?? true;
+    return this.personaldatenDialog?.verlassenErlauben() ?? this.editor?.verlassenErlauben() ?? true;
+  }
+
+  async personaldatenSchliessen(id: number): Promise<void> {
+    this.personaldaten.set(null);
+    await this.laden();
+    setTimeout(() => this.element.nativeElement.querySelector<HTMLButtonElement>(`button[data-personaldaten-id="${id}"]`)?.focus());
   }
   statusText(wert: string): string {
     return ({ AKTIV: 'Aktuell beschäftigt', KUENFTIG: 'Künftiger Eintritt', AUSGESCHIEDEN: 'Ausgeschieden',

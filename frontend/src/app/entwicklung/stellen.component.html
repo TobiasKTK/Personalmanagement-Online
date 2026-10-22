@@ -7,7 +7,7 @@
     <form #profilForm="ngForm" (ngSubmit)="profilSpeichern()">
       <fieldset [disabled]="arbeitet()"><legend>{{ profil.id ? 'Stellenprofil bearbeiten' : 'Stellenprofil erstellen' }}</legend>
         <div class="filter-grid">
-          <label class="field">Profilname<input name="profilname" [(ngModel)]="profil.name" maxlength="120" required></label>
+          <label class="field">Profilname<input #profilname name="profilname" [(ngModel)]="profil.name" maxlength="120" required></label>
           <label class="field">Stellenbeschreibung<textarea name="beschreibung" [(ngModel)]="profil.beschreibung" maxlength="4000" rows="3"></textarea></label>
           <label class="field">Aufgabenbeschreibung<textarea name="aufgaben" [(ngModel)]="profil.aufgaben" maxlength="4000" rows="3"></textarea></label>
         </div>
@@ -26,13 +26,46 @@
         </div>
       </fieldset>
     </form>
-    <ul class="management-list">
-      @for (p of profile(); track p.id) { <li><div><strong>{{ p.name }}</strong><p class="mehrzeilig">{{ p.beschreibung }}</p><p class="mehrzeilig">{{ p.aufgaben }}</p>
-        @for (a of p.anforderungen; track a.kenntnisId) { <p>{{ kenntnisName(a.kenntnisId) }} · Soll {{ a.niveau }}</p> }
-      </div><div class="actions"><button class="button secondary" (click)="profilBearbeiten(p)" [disabled]="arbeitet()">{{ p.name }} bearbeiten</button><button class="button secondary" (click)="entfernen('profile', p)" [disabled]="arbeitet()">{{ p.name }} löschen</button></div></li> }
+    <ul class="profil-kacheln">
+      @for (p of profile(); track p.id) {
+        <li class="profil-kachel">
+          <button type="button" class="profil-oeffnen" [attr.aria-label]="p.name + ': Details ansehen'" aria-haspopup="dialog" (click)="profilAnzeigen(p, profildialog)">
+            <strong>{{ p.name }}</strong>
+            <span class="profil-anzahl">{{ p.anforderungen.length }} {{ p.anforderungen.length === 1 ? 'Anforderung' : 'Anforderungen' }}</span>
+            <span class="profil-link">Details ansehen <span aria-hidden="true">→</span></span>
+          </button>
+          <div class="profil-aktionen">
+            <button type="button" class="button secondary" [attr.aria-label]="p.name + ' bearbeiten'" (click)="profilBearbeiten(p); profilname.focus()" [disabled]="arbeitet()">Bearbeiten</button>
+            <button type="button" class="button secondary" [attr.aria-label]="p.name + ' löschen'" (click)="entfernen('profile', p)" [disabled]="arbeitet()">Löschen</button>
+          </div>
+        </li>
+      }
       @empty { <li>Noch keine Stellenprofile vorhanden.</li> }
     </ul>
   </section>
+  <dialog #profildialog class="profil-dialog" aria-labelledby="profildialog-titel" (close)="detailProfil.set(null)">
+    <div class="dialog-heading">
+      <h2 id="profildialog-titel">{{ detailProfil()?.name }}</h2>
+      <button type="button" class="button secondary" autofocus (click)="profildialog.close()">Schließen</button>
+    </div>
+    @if (detailProfil(); as p) {
+      <div class="profil-details" tabindex="0" role="region" aria-label="Profildetails">
+        <h3>Stellenbeschreibung</h3>
+        <p class="mehrzeilig">{{ p.beschreibung || 'Keine Stellenbeschreibung hinterlegt.' }}</p>
+        <h3>Aufgabenbeschreibung</h3>
+        <p class="mehrzeilig">{{ p.aufgaben || 'Keine Aufgabenbeschreibung hinterlegt.' }}</p>
+        <h3>Anforderungen</h3>
+        <ul class="profil-anforderungen">
+          @for (a of p.anforderungen; track a.kenntnisId) {
+            <li>{{ kenntnisName(a.kenntnisId) }} · Soll-Niveau {{ a.niveau }}</li>
+          } @empty { <li>Keine Anforderungen hinterlegt.</li> }
+        </ul>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="button primary" (click)="profildialog.close(); profilBearbeiten(p); profilname.focus()" [disabled]="arbeitet()">Stellenprofil bearbeiten</button>
+      </div>
+    }
+  </dialog>
   <section aria-label="Planstellen"><h2>Planstellenverwaltung</h2>
     <form #stellenForm="ngForm" (ngSubmit)="stelleSpeichern()"><fieldset [disabled]="arbeitet()"><legend>{{ stelle.id ? 'Planstelle bearbeiten' : 'Planstelle anlegen' }}</legend><div class="filter-grid">
       <label class="field">Planstellenbezeichnung<input name="bezeichnung" [(ngModel)]="stelle.bezeichnung" required maxlength="120"></label>

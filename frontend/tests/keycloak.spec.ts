@@ -21,11 +21,16 @@ test('OIDC-Anmeldung, Kontenpflege ohne Passwort und gemeinsamer Logout', async 
   await expect(page.getByRole('heading', { name: 'Startübersicht', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Mein Keycloak-Konto' })).toBeVisible();
   await page.goto('/administration/konten');
-  await expect(page.getByRole('heading', { name: 'Firmenzugänge', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Benutzer & Zugänge', exact: true })).toBeVisible();
   await expect(page.locator('input[type=password]')).toHaveCount(0);
   await page.getByLabel('Kontoname', { exact: true }).fill('browser-leser');
   await page.getByRole('button', { name: 'Konto anlegen', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Konto browser-leser bearbeiten' })).toBeVisible();
+  await page.getByRole('button', { name: 'Konto browser-leser bearbeiten', exact: true }).click();
+  await expect(page.getByRole('group', { name: 'Benutzerkonto browser-leser', exact: true })).toBeVisible();
+  await expect(page.locator('input[type=password]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Konto speichern', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Änderung gespeichert.');
   await page.getByRole('button', { name: 'Abmelden', exact: true }).click();
   await expect(page).toHaveURL(/\/login\?abgemeldet$/);
   await expect(page.getByRole('status')).toHaveText('Sie wurden abgemeldet.');

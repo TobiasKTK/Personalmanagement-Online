@@ -15,8 +15,8 @@
     @if (darfSchreiben()) {
       <form (ngSubmit)="speichern()" class="filter-grid">
         <label class="field">Art<select name="art" [(ngModel)]="eingabe.art" [disabled]="arbeitet()"><option value="URLAUB">Urlaub</option><option value="KRANKHEIT">Krankheit</option><option value="ELTERNZEIT">Elternzeit</option><option value="SONSTIGES">Sonstiges</option></select></label>
-        <label class="field">Beginn<input name="beginn" type="date" [(ngModel)]="eingabe.beginn" required [min]="person().eintrittsdatum" [max]="person().austrittsdatum || '9999-12-31'" [disabled]="arbeitet()"></label>
-        <label class="field">Ende<input name="ende" type="date" [(ngModel)]="eingabe.ende" required [min]="eingabe.beginn || person().eintrittsdatum" [max]="person().austrittsdatum || '9999-12-31'" [disabled]="arbeitet()"></label>
+        <label class="field">Beginn<input name="beginn" type="date" [(ngModel)]="eingabe.beginn" required min="0001-01-01" max="9999-12-31" [disabled]="arbeitet()"></label>
+        <label class="field">Ende<input name="ende" type="date" [(ngModel)]="eingabe.ende" required [min]="eingabe.beginn || '0001-01-01'" max="9999-12-31" [disabled]="arbeitet()"></label>
         <label><input type="checkbox" name="halberTag" [(ngModel)]="eingabe.halberTag" [disabled]="arbeitet()"> Halber Urlaubstag (Beginn = Ende)</label>
         <button class="button primary" [disabled]="arbeitet()">{{ bearbeitet ? 'Abwesenheit speichern' : 'Abwesenheit anlegen' }}</button>
         @if (bearbeitet) { <button type="button" class="button secondary" (click)="bearbeiten()" [disabled]="arbeitet()">Bearbeitung abbrechen</button> }
