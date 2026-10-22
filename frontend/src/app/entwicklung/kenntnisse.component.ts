@@ -1,10 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { EntwicklungApi, Entwurf, Kenntnis, Nachweis, Person, Profil, Abgleich, KATEGORIEN, kategorieName, fehlertext, heute } from './entwicklung-api.service';
 
 @Component({ selector: 'app-kenntnisse', standalone: true, imports: [FormsModule], templateUrl: './kenntnisse.component.html', styleUrl: './entwicklung.css' })
 export class KenntnisseComponent implements OnInit {
   private readonly api = inject(EntwicklungApi);
+  private readonly route = inject(ActivatedRoute);
   readonly katalog = signal<Kenntnis[]>([]); readonly personen = signal<Person[]>([]); readonly profile = signal<Profil[]>([]);
   readonly nachweise = signal<Nachweis[]>([]); readonly ergebnis = signal<Abgleich[]>([]); readonly abgeglichen = signal(false);
   readonly fehler = signal(''); readonly meldung = signal(''); readonly arbeitet = signal(false);
@@ -12,7 +14,19 @@ export class KenntnisseComponent implements OnInit {
   kenntnis: Entwurf<Kenntnis> = { name: '', kategorie: 'FACHKENNTNIS' };
   nachweis: Entwurf<Nachweis> = this.leererNachweis();
   personId = 0; profilId: number | null = null; stichtag = heute();
-  ngOnInit(): void { void this.ausfuehren(async () => { await this.laden(); }); }
+  ngOnInit(): void { void this.ausfuehren(async () => {
+    await this.laden();
+    const person = Number(this.route.snapshot.queryParamMap.get('mitarbeiterId'));
+    const nachweis = Number(this.route.snapshot.queryParamMap.get('nachweisId'));
+    if (person > 0 && nachweis > 0) {
+      this.personId = person;
+      this.nachweise.set(await this.api.laden<Nachweis[]>('nachweise', { mitarbeiterId: person }));
+      const ziel = this.nachweise().find(n => n.id === nachweis);
+      if (!ziel) throw new Error('Der verknüpfte Nachweis wurde entfernt. Bitte die Fristenübersicht aktualisieren.');
+      this.nachweisBearbeiten(ziel);
+      setTimeout(() => document.getElementById('nachweis-formular')?.scrollIntoView({ block: 'center' }));
+    }
+  }); }
   private leererNachweis(): Entwurf<Nachweis> { return { mitarbeiterId: 0, kenntnisId: 0, niveau: 1, erworbenAm: heute(), gueltigBis: null, nachweis: '' }; }
   async laden(): Promise<void> {
     const [k, p, s] = await Promise.all([this.api.laden<Kenntnis[]>('kenntnisse'), this.api.laden<Person[]>('personen'), this.api.laden<Profil[]>('profile')]);

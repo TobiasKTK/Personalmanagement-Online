@@ -1,0 +1,70 @@
+<header class="prozess-kopf"><div><p class="eyebrow">Personalprozesse</p><h1>Onboarding und Offboarding</h1>
+  <p>{{ verwalten ? 'Ein- und Austritte vorbereiten, Zuständigkeiten festlegen und Fortschritt verfolgen.' : 'Hier finden Sie die Ihnen zugewiesenen Aufgaben für Ein- und Austritte.' }}</p></div>
+  <button class="button secondary" [disabled]="arbeitet()" (click)="aktualisieren()">Aktualisieren</button></header>
+@if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+@if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
+@if (arbeitet()) { <p aria-live="polite">Daten werden verarbeitet …</p> }
+@if (verwalten) {
+  <section class="prozess-panel" aria-labelledby="vorgang-titel"><h2 id="vorgang-titel">Neuen Vorgang starten</h2>
+    <form (ngSubmit)="suchen()"><fieldset [disabled]="arbeitet()"><div class="suche-zeile">
+      <label class="field">Mitarbeiter suchen<input name="suche" [(ngModel)]="suche" maxlength="100" placeholder="Name oder Personalnummer"></label>
+      <button class="button secondary">Mitarbeiter suchen</button></div></fieldset></form>
+    <form #startForm="ngForm" (ngSubmit)="starten()"><fieldset [disabled]="arbeitet()"><div class="prozess-grid">
+      <label class="field">Vorlage für neuen Vorgang<select name="startVorlage" [(ngModel)]="start.vorlageId" required>
+        @for (v of vorlagen(); track v.id) { <option [ngValue]="v.id">{{ typText(v.typ) }} · {{ v.titel }}</option> }</select></label>
+      <label class="field">Mitarbeiter für Vorgang<select name="startPerson" [(ngModel)]="start.mitarbeiterId" required><option [ngValue]="null">Bitte zuerst suchen und auswählen</option>
+        @for (m of mitarbeiter(); track m.id) { <option [ngValue]="m.id">{{ m.name }} · {{ m.personalnummer }}</option> }</select></label>
+      <label class="field">Eintritts- oder Austrittsdatum<input name="bezugsdatum" type="date" [(ngModel)]="start.bezugsdatum" min="0001-01-01" max="9999-12-31" required></label>
+      <label class="field">Verantwortlich für neue Aufgaben<select name="startKonto" [(ngModel)]="start.verantwortlich" required><option value="">Bitte auswählen</option>
+        @for (k of konten(); track k) { <option [value]="k">{{ k }}</option> }</select></label></div>
+      <p class="hinweis">Alle Aufgaben werden aus der Vorlage übernommen. Zuständigkeit und Fälligkeit lassen sich anschließend je Aufgabe ändern.</p>
+      <button class="button primary" [disabled]="startForm.invalid">Vorgang starten</button></fieldset></form>
+  </section>
+  <details class="prozess-panel"><summary>Vorlagen verwalten</summary>
+    <p>Negative Tage liegen vor dem Ein- oder Austritt. Änderungen gelten für künftig gestartete Vorgänge.</p>
+    <div class="vorlagen-liste">@for (v of vorlagen(); track v.id) {
+      <button class="button secondary" [disabled]="arbeitet()" (click)="bearbeiten(v)">{{ typText(v.typ) }} · {{ v.titel }} bearbeiten</button>
+    }</div>
+    <form #vorlageForm="ngForm" (ngSubmit)="vorlageSpeichern()"><fieldset [disabled]="arbeitet()"><legend>{{ entwurf.id === null ? 'Neue Vorlage' : 'Vorlage bearbeiten' }}</legend>
+      <div class="prozess-grid"><label class="field">Vorgangsart<select name="typ" [(ngModel)]="entwurf.typ"><option value="ONBOARDING">Onboarding</option><option value="OFFBOARDING">Offboarding</option></select></label>
+      <label class="field">Vorlagentitel<input name="vorlagentitel" [(ngModel)]="entwurf.titel" required maxlength="160"></label></div>
+      @for (a of entwurf.aufgaben; track $index) {
+        <div class="vorlagen-aufgabe"><label class="field">Aufgabentitel {{ $index + 1 }}<input [name]="'titel' + $index" [(ngModel)]="a.titel" required maxlength="160"></label>
+          <label class="field">Tage zum Bezugsdatum {{ $index + 1 }}<input type="number" [name]="'tage' + $index" [(ngModel)]="a.tage" required min="-365" max="365" step="1"></label>
+          <button type="button" class="button secondary" [disabled]="entwurf.aufgaben.length === 1" [attr.aria-label]="'Aufgabe ' + ($index + 1) + ' entfernen'" (click)="entwurf.aufgaben.splice($index, 1)">Entfernen</button></div>
+      }
+      <div class="actions"><button type="button" class="button secondary" [disabled]="entwurf.aufgaben.length >= 50" (click)="entwurf.aufgaben.push({ titel: '', tage: 0 })">Aufgabe ergänzen</button>
+        <button class="button primary" [disabled]="vorlageForm.invalid">Vorlage speichern</button><button type="button" class="button secondary" (click)="neueVorlage()">Neue Vorlage</button></div>
+    </fieldset></form>
+  </details>
+}
+<section class="prozess-panel" aria-labelledby="aufgaben-titel"><h2 id="aufgaben-titel">{{ verwalten ? 'Aufgabenübersicht' : 'Meine Aufgaben' }}</h2>
+  @if (fokusId) { <p>Direkt aufgerufene Aufgabe. <a routerLink="/personalprozesse">Alle Aufgaben anzeigen</a></p> }
+  <div class="filter-zeile"><label class="field">Aufgaben filtern<select [(ngModel)]="status" [disabled]="arbeitet()" (change)="filtern()"><option value="ALLE">Alle Status</option>
+    <option value="OFFEN">Offen</option><option value="IN_BEARBEITUNG">In Bearbeitung</option><option value="ERLEDIGT">Erledigt</option></select></label>
+    <p>{{ gesamt() }} Aufgaben</p></div>
+  <div class="aufgaben-liste" [attr.aria-busy]="arbeitet()">
+    @for (a of aufgaben(); track a.id) {
+      <article class="aufgabe" [class.ueberfaellig]="a.faelligAm < heute && a.status !== 'ERLEDIGT'">
+        <div><p class="eyebrow">{{ typText(a.typ) }} · {{ a.vorgangTitel }}</p><h3>{{ a.titel }}</h3>
+          <p>{{ a.mitarbeiterName }} · Vorgang {{ a.vorgangId }}</p>
+          <p>Fällig am <strong>{{ a.faelligAm | date:'dd.MM.yyyy' }}</strong> · {{ a.verantwortlich }}</p>
+          @if (a.faelligAm < heute && a.status !== 'ERLEDIGT') { <p class="frist-hinweis">Überfällig</p> }
+        </div>
+        <form (ngSubmit)="statusSpeichern(a)"><fieldset [disabled]="arbeitet()"><label class="field">Aufgabenstatus<select name="status" [ngModel]="statusEntwurf(a)" (ngModelChange)="statusAendern(a, $event)"><option value="OFFEN">Offen</option><option value="IN_BEARBEITUNG">In Bearbeitung</option><option value="ERLEDIGT">Erledigt</option></select></label>
+          <div class="actions"><button class="button primary">Status speichern</button>
+          @if (verwalten) { <button type="button" class="button secondary" (click)="zuordnung = { aufgabe: a, verantwortlich: a.verantwortlich, faelligAm: a.faelligAm }">Zuständigkeit ändern</button> }</div></fieldset></form>
+        @if (zuordnung?.aufgabe?.id === a.id && zuordnung) {
+          <form #zuordnungForm="ngForm" class="zuordnung" (ngSubmit)="zuordnungSpeichern()"><fieldset [disabled]="arbeitet()"><legend>Zuständigkeit und Fälligkeit</legend><div class="prozess-grid">
+            <label class="field">Verantwortliches Konto<select name="konto" [(ngModel)]="zuordnung.verantwortlich" required>
+              <option value="">Bitte auswählen</option>@for (k of konten(); track k) { <option [value]="k">{{ k }}</option> }</select></label>
+            <label class="field">Fällig am<input type="date" name="faellig" [(ngModel)]="zuordnung.faelligAm" min="0001-01-01" max="9999-12-31" required></label></div>
+            <div class="actions"><button class="button primary" [disabled]="zuordnungForm.invalid">Zuständigkeit speichern</button><button type="button" class="button secondary" (click)="zuordnung = null">Abbrechen</button></div>
+          </fieldset></form>
+        }
+      </article>
+    } @empty { <p>Für diese Auswahl sind keine Aufgaben vorhanden.</p> }
+  </div>
+  @if (!fokusId && gesamt() > 20) { <nav aria-label="Aufgabenseiten" class="actions"><button class="button secondary" [disabled]="arbeitet() || seite === 0" (click)="filtern(seite - 1)">Zurück</button><span>Seite {{ seite + 1 }}</span><button class="button secondary" [disabled]="arbeitet() || (seite + 1) * 20 >= gesamt()" (click)="filtern(seite + 1)">Weiter</button></nav> }
+  <p class="hinweis">Aufgaben wie „Zugänge entziehen“ dokumentieren die Durchführung durch die verantwortliche Person.</p>
+</section>

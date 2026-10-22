@@ -1,24 +1,80 @@
-<h3>Lohn- und Gehaltsdokumente</h3>
-<p>Importieren Sie PDF-Dokumente aus Agenda Lohn- und Gehaltsabrechnung oder anderen Quellen. Die Dokumente werden dieser Person zugeordnet.</p>
+<h3>Personaldokumente</h3>
+<p>Verwalten Sie Verträge, Zeugnisse, Zertifikate und Abrechnungen als PDF. Neue Versionen erhalten die bisherige Fassung. Abrechnungen sind im Mitarbeiter-Self-Service erst nach ausdrücklicher Freigabe sichtbar.</p>
 @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
 @if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
-<form (ngSubmit)="importieren()"><fieldset class="akten-felder" [disabled]="arbeitet()"><legend>PDF importieren</legend><div class="akten-grid">
-  <label class="field">Dokumenttitel<input name="dokumenttitel" [(ngModel)]="eingabe.titel" maxlength="160" required></label>
+@if (!geladen() && arbeitet()) { <p role="status">Dokumente und benötigte Unterlagen werden geladen …</p> }
+<fieldset class="akten-felder" [disabled]="arbeitet() || !bedarf()"><legend>Benötigte Unterlagen</legend>
+  <p>Wählen Sie die Dokumentarten, die für diese Person vorliegen sollen. Bereits eine aktuelle PDF je Art erfüllt den Bedarf.</p>
+  <div class="leitungsfunktionen dokumentbedarf-arten">
+    @for (a of arten; track a.id) {
+      <label><input type="checkbox" [checked]="bedarfArten.includes(a.id)" (change)="bedarfWaehlen(a.id, $event)" [attr.aria-label]="a.name + ' erforderlich'">{{ a.name }}</label>
+    }
+  </div>
+  <div class="aktionen dokumentbedarf-aktionen">
+    <button type="button" class="button primary compact" (click)="bedarfSpeichern()" [disabled]="!bedarfGeaendert()">Dokumentbedarf speichern</button>
+    <button type="button" class="button secondary compact" (click)="bedarfNeuLaden()">Dokumentbedarf neu laden</button>
+  </div>
+  @if (bedarfGeaendert()) { <p>Die Auswahl enthält ungespeicherte Änderungen.</p> }
+</fieldset>
+@if (bedarf(); as b) {
+  <section aria-label="Fehlende Unterlagen" class="akten-eintrag">
+    <h4>Fehlende Unterlagen</h4>
+    @if (!b.benoetigt.length) { <p>Noch keine benötigten Dokumentarten festgelegt.</p> }
+    @else if (!b.fehlend.length) { <p>Alle benötigten Dokumentarten liegen vor.</p> }
+    @else { <ul>@for (a of b.fehlend; track a) { <li>{{ art(a) }}</li> }</ul> }
+  </section>
+}
+<form (ngSubmit)="importieren()"><fieldset class="akten-felder" [disabled]="arbeitet()"><legend>{{ versionZiel() ? 'Neue PDF-Version' : 'PDF importieren' }}</legend>
+@if (versionZiel(); as ziel) {
+  <p>Neue Fassung zu „{{ ziel.titel }}“ · bisher Version {{ ziel.dokumentVersion }}. Frühere Versionen bleiben abrufbar. Eine Mitarbeiterfreigabe wird nicht übernommen.</p>
+}
+<div class="akten-grid">
+  <label class="field">Dokumenttitel<input #titelfeld name="dokumenttitel" [(ngModel)]="eingabe.titel" maxlength="160" required></label>
   <label class="field">Dokumentart<select name="dokumentart" [(ngModel)]="eingabe.art">@for (a of arten; track a.id) { <option [value]="a.id">{{ a.name }}</option> }</select></label>
   <label class="field">Quelle<select name="quelle" [(ngModel)]="eingabe.quelle"><option value="AGENDA">Agenda Lohn- und Gehaltsabrechnung</option><option value="MANUELL">Andere Quelle</option></select></label>
   <label class="field">Abrechnungsmonat<input name="monat" type="month" [(ngModel)]="eingabe.monat" [required]="eingabe.art === 'ABRECHNUNG'"></label>
-  <label class="field">PDF-Datei<input #dateifeld type="file" accept="application/pdf,.pdf" (change)="dateiWaehlen($event)" required><small>Maximal 5 MiB pro Dokument</small></label>
-  <button class="button primary" type="submit" [disabled]="!datei">PDF importieren</button>
+  <label class="field">PDF-Datei<input #dateifeld type="file" accept="application/pdf,.pdf" (change)="dateiWaehlen($event)" aria-label="PDF-Datei" required><small>Maximal 5 MiB pro PDF-Version</small></label>
+  <div class="aktionen"><button class="button primary" type="submit" [disabled]="!datei">{{ versionZiel() ? 'Version speichern' : 'PDF importieren' }}</button>
+    @if (versionZiel()) { <button class="button secondary" type="button" (click)="uploadVerwerfen()">Version abbrechen</button> }
+  </div>
 </div></fieldset></form>
-@if (!geladen() && arbeitet()) { <p role="status">Dokumente werden geladen …</p> }
-<div class="table-scroll"><table><caption class="sr-only">Gespeicherte Lohn- und Gehaltsdokumente</caption><thead><tr><th>Dokument</th><th>Monat</th><th>Quelle</th><th>Größe</th><th>Aktionen</th></tr></thead><tbody>
-  @for (d of dokumente(); track d.id) { <tr><td>{{ d.titel }}<br><small>{{ art(d.art) }}</small></td><td>{{ d.monat || '—' }}</td><td>{{ d.quelle === 'AGENDA' ? 'Agenda Lohn- und Gehaltsabrechnung' : 'Andere Quelle' }}</td><td>{{ d.groesse / 1024 | number:'1.0-1' }} KiB</td><td><div class="aktionen"><button class="button secondary compact" (click)="ansehen(d)" [disabled]="arbeitet()">Ansehen</button><button class="button secondary compact" (click)="loeschen(d)" [disabled]="arbeitet()">Löschen</button></div></td></tr> }
+<div class="table-scroll" tabindex="0" role="region" aria-label="Aktuelle Dokumentübersicht"><table><caption class="sr-only">Aktuelle Personaldokumente</caption><thead><tr><th>Dokument</th><th>Monat</th><th>Quelle</th><th>Größe</th><th>Aktionen</th></tr></thead><tbody>
+  @for (d of dokumente(); track d.id) { <tr>
+    <td>{{ d.titel }}<br><small>{{ art(d.art) }} · Version {{ d.dokumentVersion }}</small>
+      @if (d.art === 'ABRECHNUNG') { <br><small>{{ d.selfserviceFreigegeben ? 'Für Mitarbeiter freigegeben' : 'Für Mitarbeiter gesperrt' }}</small> }
+    </td>
+    <td>{{ d.monat || '—' }}</td><td>{{ d.quelle === 'AGENDA' ? 'Agenda Lohn- und Gehaltsabrechnung' : 'Andere Quelle' }}</td><td>{{ d.groesse / 1024 | number:'1.0-1' }} KiB</td>
+    <td><div class="aktionen">
+      <button type="button" class="button secondary compact" (click)="ansehen(d)" [disabled]="arbeitet()">Ansehen</button>
+      <button type="button" class="button secondary compact" (click)="versionVorbereiten(d)" [disabled]="arbeitet()">Version hinzufügen</button>
+      <button type="button" class="button secondary compact" (click)="versionenAnzeigen(d)" [disabled]="arbeitet()">Versionen anzeigen</button>
+      @if (d.art === 'ABRECHNUNG') { <button type="button" class="button secondary compact" (click)="freigeben(d)" [disabled]="arbeitet()">{{ d.selfserviceFreigegeben ? 'Freigabe zurücknehmen' : 'Für Mitarbeiter freigeben' }}</button> }
+      <button type="button" class="button secondary compact" (click)="loeschen(d)" [disabled]="arbeitet()">Löschen</button>
+    </div></td>
+  </tr> }
   @empty { <tr><td colspan="5">{{ geladen() ? 'Noch keine Dokumente importiert.' : 'Keine Dokumente geladen.' }}</td></tr> }
 </tbody></table></div>
 <div class="pagination"><span>{{ gesamt() }} Dokumente · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Dokumentseite" [disabled]="seite === 0 || arbeitet()" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Dokumentseite" [disabled]="(seite + 1) * 20 >= gesamt() || arbeitet()" (click)="seite = seite + 1; laden()">→</button></div></div>
 <button class="button secondary compact" (click)="laden()" [disabled]="arbeitet()">Dokumente aktualisieren</button>
+@if (historieZiel(); as ziel) {
+  <section aria-label="Dokumentversionen" class="akten-eintrag">
+    <h4 #historieUeberschrift tabindex="-1" class="dokument-ueberschrift">Versionen von „{{ ziel.titel }}“</h4>
+    <p>Jede PDF-Fassung bleibt unverändert abrufbar. Freigaben gelten für die jeweilige Version; ältere Freigaben können hier zurückgenommen werden.</p>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Versionsübersicht"><table><caption class="sr-only">Gespeicherte Dokumentversionen</caption>
+      <thead><tr><th>Version</th><th>Dokument</th><th>Importiert</th><th>Aktionen</th></tr></thead><tbody>
+        @for (d of versionen(); track d.id) { <tr>
+          <td>Version {{ d.dokumentVersion }}</td><td>{{ d.titel }}<br><small>{{ art(d.art) }}</small></td><td>{{ d.erstelltAm | date:'dd.MM.yyyy HH:mm' }}</td>
+          <td><div class="aktionen"><button type="button" class="button secondary compact" (click)="ansehen(d)" [disabled]="arbeitet()">Ansehen</button>
+            @if (d.art === 'ABRECHNUNG') { <button type="button" class="button secondary compact" (click)="freigeben(d)" [disabled]="arbeitet()">{{ d.selfserviceFreigegeben ? 'Freigabe zurücknehmen' : 'Für Mitarbeiter freigeben' }}</button> }
+          </div></td>
+        </tr> }
+      </tbody>
+    </table></div>
+    <button type="button" class="button secondary compact" (click)="historieZiel.set(null)" [disabled]="arbeitet()">Versionen schließen</button>
+  </section>
+}
 @if (vorschau(); as url) {
-  <section aria-label="Dokumentansicht"><h3>{{ ausgewaehlt()?.titel }}</h3><div class="aktionen"><a class="button secondary" [href]="downloadUrl" [download]="'dokument-' + ausgewaehlt()?.id + '.pdf'">PDF herunterladen</a><button class="button secondary" (click)="vorschauSchliessen()">Ansicht schließen</button></div><p class="section-description">Falls Ihr Browser PDFs nicht eingebettet anzeigen kann, verwenden Sie den Download.</p>
+  <section aria-label="Dokumentansicht"><h4 class="dokument-ueberschrift">{{ ausgewaehlt()?.titel }} · Version {{ ausgewaehlt()?.dokumentVersion }}</h4><div class="aktionen"><a class="button secondary" [href]="downloadUrl" [download]="'dokument-' + ausgewaehlt()?.id + '.pdf'">PDF herunterladen</a><button class="button secondary" (click)="vorschauSchliessen()">Ansicht schließen</button></div><p class="section-description">Falls Ihr Browser PDFs nicht eingebettet anzeigen kann, verwenden Sie den Download.</p>
     <!-- Die native PDF-Anzeige wird durch iframe-sandbox blockiert. src ist ausschließlich eine selbst erzeugte application/pdf-Blob-URL. -->
     <iframe class="pdf-ansicht" title="PDF-Dokumentansicht" [src]="url" referrerpolicy="no-referrer"></iframe></section>
 }

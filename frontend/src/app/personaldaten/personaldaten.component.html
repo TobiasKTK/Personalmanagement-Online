@@ -64,7 +64,7 @@
           <p><a routerLink="/stellen">Stellen und Planstellen verwalten</a></p>
       </div> }
       @if (dokumenteBesucht) { <app-personaldokumente [personId]="person().id" [hidden]="bereich !== 'Dokumente'" (arbeitetGeaendert)="kindArbeitet.set($event)" /> }
-      @if (erweiterungenBesucht) { <app-personaldaten-erweiterungen [personId]="person().id" [hidden]="bereich !== 'Ergänzungen'" (arbeitetGeaendert)="kindArbeitet.set($event)" /> }
+      @if (erweiterungenBesucht) { <app-personaldaten-erweiterungen [personId]="person().id" [fristBereich]="fristBereich()" [fristDatensatz]="fristDatensatz()" [hidden]="bereich !== 'Ergänzungen'" (arbeitetGeaendert)="kindArbeitet.set($event)" /> }
       <div class="akten-fuss" [hidden]="bereich === 'Ergänzungen'">
         @if (bereich !== 'Dokumente' && bereich !== 'Historie' && bereich !== 'Ergänzungen') { <button type="submit" [attr.form]="bereich === 'Organisation' ? 'organisation-form' : 'personaldaten-form'" class="button primary" [disabled]="arbeitet() || kindArbeitet()">{{ arbeitet() ? 'Wird gespeichert …' : 'Personaldaten speichern' }}</button> }
         <button class="button secondary" (click)="neuLaden()" [disabled]="arbeitet() || kindArbeitet()">Neu laden</button>

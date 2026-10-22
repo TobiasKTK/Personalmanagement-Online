@@ -245,7 +245,7 @@
   <app-mitarbeiter-details [person]="person" [darfSchreiben]="darfSchreiben()" (geschlossen)="details.set(null); laden()" />
 }
 @if (personaldaten(); as person) {
-  <app-personaldaten [person]="person" (geschlossen)="personaldatenSchliessen(person.id)" />
+  <app-personaldaten [person]="person" [fristBereich]="fristZiel().bereich" [fristDatensatz]="fristZiel().datensatz" (geschlossen)="personaldatenSchliessen(person.id)" />
 }
 <dialog
   #loeschdialog

@@ -36,3 +36,8 @@
 }
 
 .akten-fuss[hidden] { display: none; }
+.dokumentbedarf-arten { gap: .5rem 1rem; margin-bottom: 1rem; }
+.dokumentbedarf-arten label { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.dokumentbedarf-arten input { flex-shrink: 0; }
+.dokumentbedarf-aktionen > .button + .button { margin-left: 0; }
+.dokument-ueberschrift { overflow-wrap: anywhere; }

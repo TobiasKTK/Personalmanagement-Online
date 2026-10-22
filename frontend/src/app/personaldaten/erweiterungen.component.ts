@@ -15,6 +15,8 @@ export class ErweiterungenComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly sitzung = inject(SitzungService).sitzung;
   readonly personId = input.required<number>();
+  readonly fristBereich = input('');
+  readonly fristDatensatz = input('');
   readonly arbeitetGeaendert = output<boolean>();
   @ViewChild('editor', { read: ElementRef }) private editor?: ElementRef<HTMLFormElement>;
   readonly daten = signal<Erweiterungen | null>(null);
@@ -39,7 +41,17 @@ export class ErweiterungenComponent implements OnInit {
     await this.ausfuehren(async () => {
       const a = await firstValueFrom(mitFehlern(this.http.get<ErweiterteAkte>(this.pfad())));
       this.uebernehmen(a); this.basisUebernehmen(a.fte);
+      if (this.fristDatensatz()) setTimeout(() => this.datensatzOeffnen());
     });
+  }
+  private datensatzOeffnen(): void {
+    if (!['vollmachten', 'beauftragungen', 'fortbildungen'].includes(this.fristBereich())) return;
+    const eintraege = this.editor?.nativeElement.querySelectorAll<HTMLElement>('[data-datensatz]');
+    const ziel = Array.from(eintraege ?? []).find(e => e.dataset['datensatz'] === this.fristDatensatz());
+    if (!ziel) { this.fehler.set('Der verknüpfte Datensatz wurde entfernt. Bitte die Fristenübersicht aktualisieren.'); return; }
+    const abschnitt = ziel.closest('details'); if (abschnitt) abschnitt.open = true;
+    ziel.classList.add('frist-ziel'); ziel.scrollIntoView({ block: 'center' });
+    ziel.querySelector<HTMLInputElement>('input')?.focus();
   }
   async fteAktualisieren(): Promise<void> {
     if (!this.daten()) { await this.laden(); return; }

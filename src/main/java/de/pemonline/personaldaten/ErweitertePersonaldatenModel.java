@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 public final class ErweitertePersonaldatenModel {
     private ErweitertePersonaldatenModel() {}
@@ -16,27 +17,27 @@ public final class ErweitertePersonaldatenModel {
             @NotNull @Min(1) @Max(99) Integer prioritaet, @Size(max=1000) String hinweis) {
         public Kontakt { name = text(name); beziehung = text(beziehung); telefon = text(telefon); email = text(email); hinweis = text(hinweis); }
     }
-    public record Vollmacht(@NotBlank @Size(max=160) String bezeichnung, @Size(max=1000) String umfang,
+    public record Vollmacht(UUID id, @NotBlank @Size(max=160) String bezeichnung, @Size(max=1000) String umfang,
             @Size(max=160) String erteiltDurch, LocalDate beginn, LocalDate ende, @Size(max=1000) String hinweis) {
-        public Vollmacht { bezeichnung = text(bezeichnung); umfang = text(umfang); erteiltDurch = text(erteiltDurch); hinweis = text(hinweis); }
+        public Vollmacht { if (id == null) id = UUID.randomUUID(); bezeichnung = text(bezeichnung); umfang = text(umfang); erteiltDurch = text(erteiltDurch); hinweis = text(hinweis); }
     }
     public record Kostentraeger(@NotBlank @Size(max=40) String nummer, @NotBlank @Size(max=160) String bezeichnung,
             LocalDate beginn, LocalDate ende, @Size(max=1000) String hinweis) {
         public Kostentraeger { nummer = text(nummer); bezeichnung = text(bezeichnung); hinweis = text(hinweis); }
     }
-    public record Beauftragung(@NotBlank @Size(max=160) String aufgabe, @Size(max=160) String bereich,
+    public record Beauftragung(UUID id, @NotBlank @Size(max=160) String aufgabe, @Size(max=160) String bereich,
             @Size(max=160) String bestelltDurch, LocalDate beginn, LocalDate ende, @Size(max=1000) String hinweis) {
-        public Beauftragung { aufgabe = text(aufgabe); bereich = text(bereich); bestelltDurch = text(bestelltDurch); hinweis = text(hinweis); }
+        public Beauftragung { if (id == null) id = UUID.randomUUID(); aufgabe = text(aufgabe); bereich = text(bereich); bestelltDurch = text(bestelltDurch); hinweis = text(hinweis); }
     }
     public record Bildung(@NotNull Bildungsart art, @NotBlank @Size(max=160) String einrichtung,
             @Size(max=160) String fachrichtung, @Size(max=160) String abschluss, LocalDate beginn, LocalDate ende,
             @NotNull Status status, @Size(max=1000) String hinweis) {
         public Bildung { einrichtung = text(einrichtung); fachrichtung = text(fachrichtung); abschluss = text(abschluss); hinweis = text(hinweis); }
     }
-    public record Fortbildung(@NotBlank @Size(max=160) String titel, @Size(max=160) String anbieter,
+    public record Fortbildung(UUID id, @NotBlank @Size(max=160) String titel, @Size(max=160) String anbieter,
             LocalDate beginn, LocalDate ende, @DecimalMin("0") @Digits(integer=5, fraction=2) BigDecimal dauerStunden,
             @NotNull Status status, @Size(max=240) String nachweis, LocalDate gueltigBis, @Size(max=1000) String hinweis) {
-        public Fortbildung { titel = text(titel); anbieter = text(anbieter); nachweis = text(nachweis); hinweis = text(hinweis); }
+        public Fortbildung { if (id == null) id = UUID.randomUUID(); titel = text(titel); anbieter = text(anbieter); nachweis = text(nachweis); hinweis = text(hinweis); }
     }
     public record Fahrzeug(@NotBlank @Size(max=160) String hersteller, @NotBlank @Size(max=160) String modell,
             @NotBlank @Size(max=80) String kennung, LocalDate beginn, LocalDate ende, @Size(max=160) String leasinganbieter,

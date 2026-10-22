@@ -1,13 +1,15 @@
-# Implementierungsplan: Erweiterte Personaldaten
+﻿# Personalprozesse: Implementierungsplan
 
-Freigegebener Umfang: `docs/personaldaten-erweiterung-umfang.md`; technischer Vertrag: `docs/personaldaten-erweiterung-technik.md`. Weitere Zwischenfreigaben wurden vom Nutzer abgewählt.
+Freigegeben: CAPABILITY-MAP-personalprozesse.md und die vier SPEC-Dateien. Vollständige Umsetzung ohne weitere Zwischenfreigaben.
 
-1. Isolierte API-Tests für die neuen strukturierten Listen, Rollen und FTE anlegen; erwartetes Fehlschlagen bestätigen.
-2. Neue Migration V16 und gemeinsame validierte Speicherung ergänzen. Bestehende Bank-/Vergütungsdaten bleiben getrennt.
-3. Kontakte, Vollmachten, Kostenträger und Beauftragungen mit mehreren Einträgen pflegen.
-4. Bildungs- und Fortbildungsdaten sowie getrennte Wagen-/Fahrradlisten ergänzen und mit vorhandener Ausbildungs-/Kenntnisverwaltung verbinden.
-5. Firmenbezogene Vollzeitbasis und berechnetes FTE im selben Personaldaten-Einstieg anzeigen.
-6. Bestehende Personaldaten-Oberfläche anbinden; Entwürfe gegen unbeabsichtigtes Schließen schützen.
-7. Migration, API und Browser prüfen; Dokumentation und Ergebnisse abschließen.
+Status: Umsetzung, Review und Prüfungen abgeschlossen am 22.10.2026. Details: [Prüfbericht](../docs/personalprozesse.md).
 
-Gemeinsame Änderungen an der parallel entstehenden Personaldaten-Oberfläche werden erst nach erneutem Lesen des aktuellen Stands vorgenommen. Keine Betriebsdaten migrieren, keine fremden Änderungen zurücksetzen. Aufgaben stehen in `tasks/todo.md`.
+1. Persönliche Hinweise mit internen Direktlinks, Duplikatschutz und kompatiblen Urlaubshinweisen.
+2. Fristen aus Quelldaten mit stabilen Referenzen, Zuständigkeit, Vorlauf und Wiedervorlage.
+3. Kopierte Onboarding-/Offboarding-Vorlagen mit verantwortlichen Konten, Fälligkeiten und Status.
+4. Eigene Kontakt-/Bankänderungsanträge sowie ausdrücklich freigegebene Gehaltsdokumente.
+5. Migration aus V16, Backend-Suite, Angular-Build, reale Browsertests und abschließende Dokumentation.
+
+Die unabhängigen Fachmodule werden gemäß Planungs-Skill parallel bearbeitet. Gemeinsame Dateien, Migrationen und Buildläufe werden zentral koordiniert. Keine Betriebsdaten ändern, keine Commits erstellen.
+
+Risiken und Gegenmaßnahmen: Fremdzugriff durch getrennte APIs verhindern; verlorene Änderungen durch Sperren und Versionen verhindern; stabile Quell-IDs statt Listenpositionen; Benachrichtigungsschlüssel eindeutig speichern; je Firma separater Hintergrundkontext und Transaktion.

@@ -1,0 +1,39 @@
+<section class="team-panel administration import-panel" [attr.aria-busy]="arbeitet()">
+  <h1>Mitarbeiter importieren</h1>
+  <p>Übernehmen Sie neue Mitarbeitende in die aktuell ausgewählte Firma. Vor dem Speichern prüfen Sie alle Angaben in einer Vorschau. Bereits vorhandene Personalnummern werden als Konflikt angezeigt.</p>
+  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
+  @if (arbeitet()) { <p role="status">Import wird bearbeitet …</p> }
+  <h2>1. CSV-Datei auswählen</h2>
+  <p>UTF-8 mit Kopfzeile, höchstens 500 Datensätze und 1 MiB. Datumsformat: JJJJ-MM-TT. Dezimalzahlen dürfen Komma oder Punkt enthalten. Organisationseinheiten müssen bereits angelegt sein.</p>
+  <button class="button secondary" type="button" (click)="vorlage()">CSV-Vorlage herunterladen</button>
+  <form (ngSubmit)="lesen()"><fieldset [disabled]="arbeitet()"><legend>Datei und Format</legend><div class="import-grid">
+    <label class="field">CSV-Datei<input type="file" accept=".csv,text/csv" (change)="dateiWaehlen($event)" required></label>
+    <label class="field">Trennzeichen<select name="trennzeichen" [(ngModel)]="trennzeichen" (ngModelChange)="zuruecksetzen()"><option value=";">Semikolon (;)</option><option value=",">Komma (,)</option><option [value]="'\t'">Tabulator</option></select></label>
+    <button class="button primary" [disabled]="!datei">Spalten einlesen</button>
+  </div></fieldset></form>
+  @if (spalten().length) {
+    <h2>2. Spalten zuordnen</h2>
+    <p>Pflichtfelder sind mit * gekennzeichnet. Nicht zugeordnete optionale Felder bleiben leer.</p>
+    <details><summary>Erste Datensätze der Datei ansehen</summary><div class="table-scroll"><table><caption class="sr-only">CSV-Beispieldaten</caption><thead><tr>@for (spalte of spalten(); track $index) { <th>{{ spalte }}</th> }</tr></thead><tbody>@for (zeile of beispiele(); track $index) { <tr>@for (wert of zeile; track $index) { <td>{{ wert }}</td> }</tr> }</tbody></table></div></details>
+    <form (ngSubmit)="pruefen()"><fieldset [disabled]="arbeitet()"><legend>Zuordnung</legend><div class="import-grid">
+      @for (feld of felder; track feld.id) { <label class="field">{{ feld.name }}{{ feld.pflicht ? ' *' : '' }}<select [name]="feld.id" [(ngModel)]="zuordnung[feld.id]" (ngModelChange)="zuordnungGeaendert()" [required]="feld.pflicht"><option [ngValue]="null">Nicht zugeordnet</option>@for (spalte of spalten(); track $index) { <option [ngValue]="$index">{{ $index + 1 }} · {{ spalte }}</option> }</select></label> }
+    </div><button class="button primary">Vorschau prüfen</button></fieldset></form>
+  }
+  @if (vorschau(); as v) {
+    <h2>3. Vorschau und Übernahme</h2>
+    <p>{{ v.zeilen.length }} Datensätze · {{ v.fehleranzahl }} Hinweise auf Fehler</p>
+    <div class="table-scroll"><table><caption class="sr-only">Geprüfte Importvorschau</caption><thead><tr><th>Datensatz</th><th>Personalnummer</th><th>Name</th><th>Eintritt</th><th>Wochenstunden</th><th>Organisation</th><th>Prüfung und Details</th></tr></thead><tbody>
+      @for (zeile of sichtbareZeilen(); track zeile.nummer) { <tr><td>{{ zeile.nummer }}</td><td>{{ zeile.daten.personalnummer ?? '—' }}</td><td>{{ zeile.daten.vorname }} {{ zeile.daten.nachname }}</td><td>{{ zeile.daten.eintrittsdatum || '—' }}</td><td>{{ zeile.daten.wochenstunden | number:'1.0-2' }}</td><td>{{ zeile.daten.organisationseinheit || '—' }}</td><td>
+        @if (zeile.fehler.length) { <ul class="import-fehler">@for (hinweis of zeile.fehler; track $index) { <li>{{ hinweis }}</li> }</ul> } @else { <span>Bereit zur Anlage</span> }
+        <details><summary>Alle Angaben</summary><dl>@for (feld of felder; track feld.id) { <dt>{{ feld.name }}</dt><dd>{{ wert(zeile.daten, feld.id) || '—' }}</dd> }</dl></details>
+      </td></tr> }
+    </tbody></table></div>
+    <div class="pagination"><span>Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Vorschauseite" [disabled]="seite === 0" (click)="seite = seite - 1">←</button><button class="page-button" aria-label="Nächste Vorschauseite" [disabled]="(seite + 1) * 25 >= v.zeilen.length" (click)="seite = seite + 1">→</button></div></div>
+    @if (v.id && importiert() === null) {
+      <p>Die Vorschau gilt bis {{ v.gueltigBis | date:'HH:mm' }} Uhr. Erst mit „Jetzt importieren“ werden alle gezeigten Personen gemeinsam angelegt. Eine neue Vorschau ersetzt die vorherige dieses Kontos in dieser Firma.</p>
+      <button class="button primary" type="button" [disabled]="arbeitet()" (click)="uebernehmen()">Jetzt importieren ({{ v.zeilen.length }})</button>
+    }
+    @if (importiert() !== null) { <a class="button secondary" routerLink="/mitarbeiter">Zur Teamübersicht</a> }
+  }
+</section>

@@ -101,16 +101,7 @@ public class PersonaldatenService {
         return lesen(person);
     }
     private void pruefen(long person, Mitarbeiter m, Daten d) {
-        String iban = d.bank().iban();
-        if (!iban.isEmpty()) {
-            if (d.bank().kontoinhaber().isBlank() || !iban.matches("[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}") || (iban.startsWith("DE") && iban.length() != 22)) throw ungueltig("Bitte Kontoinhaber und eine gültige IBAN eingeben.");
-            int rest = 0;
-            for (char c : (iban.substring(4) + iban.substring(0, 4)).toCharArray()) {
-                int wert = Character.isDigit(c) ? c - '0' : c - 'A' + 10;
-                rest = (rest * (wert >= 10 ? 100 : 10) + wert) % 97;
-            }
-            if (rest != 1) throw ungueltig("Die IBAN-Prüfsumme ist ungültig.");
-        }
+        BankPruefung.pruefen(d.bank());
         if (d.profilId() != null && jdbc.sql("SELECT COUNT(*) FROM stellenprofil WHERE id = :id").param("id", d.profilId()).query(Long.class).single() == 0) throw fehlt("Stellenprofil");
         Set<String> nummern = new HashSet<>(); BigDecimal summe = BigDecimal.ZERO;
         for (var k : d.kostenstellen()) {

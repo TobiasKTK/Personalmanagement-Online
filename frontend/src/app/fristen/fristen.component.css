@@ -1,0 +1,25 @@
+﻿:host { display: block; min-width: 0; }
+.fristen-filter { display: flex; gap: 1rem; flex-wrap: wrap; padding: 1rem; margin-bottom: 1rem; }
+.fristen-filter .field { flex: 1; min-width: 12rem; margin-bottom: 0; }
+.fristen-liste { display: grid; gap: 1rem; }
+.frist { padding: 1.25rem; min-width: 0; }
+.frist-kopf { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.frist h2 { font-size: 1.125rem; margin: .25rem 0; overflow-wrap: anywhere; }
+.frist-status { font-size: .875rem; font-weight: 700; white-space: nowrap; }
+.ueberfaellig { color: var(--danger); }
+dl { display: flex; gap: 1rem 2rem; flex-wrap: wrap; margin: 1rem 0; }
+dt { font-size: .875rem; color: var(--muted); }
+dd { margin: .25rem 0; overflow-wrap: anywhere; }
+.frist-aktionen { display: flex; gap: .5rem; flex-wrap: wrap; }
+.frist-aktionen > .button + .button { margin-left: 0; }
+.frist-editor { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.frist-editor fieldset { border: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
+.frist-editor legend { font-weight: 700; margin-bottom: .75rem; }
+.frist-checkbox { display: flex; gap: .5rem; align-items: center; }
+.frist-editor p { font-size: .875rem; color: var(--muted); }
+@media (max-width: 480px) {
+  .frist-kopf { flex-direction: column; }
+  .frist { padding: 1rem; }
+  .fristen-filter .field { min-width: 0; flex-basis: 100%; }
+  .frist-editor fieldset { grid-template-columns: 1fr; }
+}

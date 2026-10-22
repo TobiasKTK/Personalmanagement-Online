@@ -13,7 +13,7 @@
   <label class="field">Person für Kenntnisse<select [(ngModel)]="personId" (ngModelChange)="personWechseln()" [disabled]="arbeitet()"><option [ngValue]="0">Bitte wählen</option>@for (p of personen(); track p.id) { <option [ngValue]="p.id">{{ p.name }} · {{ p.personalnummer }}</option> }</select></label>
   @if (personId) {
     <p>Niveau: 1 Grundlagen · 2 Basis · 3 selbstständig · 4 fortgeschritten · 5 Experte. Teilnahme- und Abschlussnachweise können mit Niveau 1 erfasst werden. Nicht erfasst bedeutet unbekannt.</p>
-    <form #nachweisForm="ngForm" (ngSubmit)="nachweisSpeichern()"><fieldset [disabled]="arbeitet()"><legend>{{ nachweis.id ? 'Nachweis bearbeiten' : 'Kenntnis erfassen' }}</legend><div class="filter-grid">
+    <form id="nachweis-formular" #nachweisForm="ngForm" (ngSubmit)="nachweisSpeichern()"><fieldset [disabled]="arbeitet()"><legend>{{ nachweis.id ? 'Nachweis bearbeiten' : 'Kenntnis erfassen' }}</legend><div class="filter-grid">
       <label class="field">Nachgewiesene Kenntnis<select name="kenntnis" [(ngModel)]="nachweis.kenntnisId" [disabled]="!!nachweis.id" required><option [ngValue]="0" disabled>Bitte wählen</option>@for (k of katalog(); track k.id) { <option [ngValue]="k.id">{{ k.name }} · {{ kategorieName(k.kategorie) }}</option> }</select></label>
       <label class="field">Ist-Niveau<input name="niveau" type="number" [(ngModel)]="nachweis.niveau" min="1" max="5" step="1" required></label>
       <label class="field">Erworben am<input name="erworben" type="date" [(ngModel)]="nachweis.erworbenAm" required></label>

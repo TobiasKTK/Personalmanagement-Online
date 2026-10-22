@@ -105,27 +105,39 @@ test('Stellenprofil, Organisation, Arbeitszeit und Planstelle werden aus der Per
   expect(s.status()).toBe(201); const profil = await s.json();
   const plan = await request.post('/api/entwicklung/planstellen', { data: { bezeichnung: 'Personalakten-Planstelle', profilId: profil.id, organisationId: org.id, mitarbeiterId: null, anteil: 1 } });
   expect(plan.status()).toBe(201);
-  await page.goto('/mitarbeiter?suche=Organisation%20E2E');
-  await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
-  await dialog.getByRole('button', { name: 'Organisation', exact: true }).click();
-  await dialog.getByLabel('Zugewiesenes Stellenprofil').selectOption({ label: profil.name });
-  await dialog.getByRole('button', { name: 'Personaldaten speichern' }).click();
-  await expect(dialog.getByRole('status')).toContainText('Personaldaten gespeichert');
-  const historie = dialog.getByRole('region', { name: 'Abteilungs- und Arbeitszeitverlauf' });
-  await historie.getByLabel('Gültig ab').fill('2025-01-01');
-  await historie.getByLabel('Wochenstunden').fill('32');
-  await historie.getByRole('combobox', { name: 'Organisationseinheit', exact: true }).selectOption({ label: org.name });
-  await historie.getByRole('button', { name: 'Historischen Stand speichern' }).click();
-  await expect(historie.getByRole('status')).toHaveText('Historischer Stand gespeichert.');
-  await expect(dialog.getByText('Personalakten-Team · 32 Wochenstunden', { exact: true })).toBeVisible();
-  await dialog.getByLabel('Freie Planstelle').selectOption({ label: 'Personalakten-Planstelle · 100 %' });
-  await dialog.getByRole('button', { name: 'Planstelle zuweisen', exact: true }).click();
-  await expect(dialog.locator('.management-list').filter({ hasText: 'Personalakten-Planstelle' })).toBeVisible();
-  await dialog.getByRole('button', { name: 'Historie', exact: true }).click();
-  await dialog.getByText(/Stand #/).first().click();
-  await expect(dialog.locator('.historischer-stand')).toContainText('32 Wochenstunden');
-  await expect(dialog.locator('.historischer-stand')).toContainText('Personalakten-Stelle');
+  const planstelle = await plan.json();
+  try {
+    await page.goto('/mitarbeiter?suche=Organisation%20E2E');
+    await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+    await dialog.getByRole('button', { name: 'Organisation', exact: true }).click();
+    await dialog.getByLabel('Zugewiesenes Stellenprofil').selectOption({ label: profil.name });
+    await dialog.getByRole('button', { name: 'Personaldaten speichern' }).click();
+    await expect(dialog.getByRole('status')).toContainText('Personaldaten gespeichert');
+    const historie = dialog.getByRole('region', { name: 'Abteilungs- und Arbeitszeitverlauf' });
+    await historie.getByLabel('Gültig ab').fill('2025-01-01');
+    await historie.getByLabel('Wochenstunden').fill('32');
+    await historie.getByRole('combobox', { name: 'Organisationseinheit', exact: true }).selectOption({ label: org.name });
+    await historie.getByRole('button', { name: 'Historischen Stand speichern' }).click();
+    await expect(historie.getByRole('status')).toHaveText('Historischer Stand gespeichert.');
+    await expect(dialog.getByText('Personalakten-Team · 32 Wochenstunden', { exact: true })).toBeVisible();
+    await dialog.getByLabel('Freie Planstelle').selectOption({ label: 'Personalakten-Planstelle · 100 %' });
+    await dialog.getByRole('button', { name: 'Planstelle zuweisen', exact: true }).click();
+    await expect(dialog.locator('.management-list').filter({ hasText: 'Personalakten-Planstelle' })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Historie', exact: true }).click();
+    await dialog.getByText(/Stand #/).first().click();
+    await expect(dialog.locator('.historischer-stand')).toContainText('32 Wochenstunden');
+    await expect(dialog.locator('.historischer-stand')).toContainText('Personalakten-Stelle');
+  } finally {
+    // Die besetzte Planstelle blockiert sonst die Personenbereinigung späterer Kalender-Tests.
+    const stellen = await (await request.get('/api/entwicklung/planstellen')).json();
+    const aktuell = stellen.find((s: { id: number }) => s.id === planstelle.id);
+    if (aktuell) expect((await request.delete(`/api/entwicklung/planstellen/${aktuell.id}?version=${aktuell.version}`)).status()).toBe(204);
+    const mitarbeiter = await (await request.get(`/api/mitarbeiter/${person.id}`)).json();
+    expect((await request.delete(`/api/mitarbeiter/${person.id}?version=${mitarbeiter.version}`)).status()).toBe(204);
+    expect((await request.delete(`/api/entwicklung/profile/${profil.id}?version=${profil.version}`)).status()).toBe(204);
+    expect((await request.delete(`/api/organisationseinheiten/${org.id}?version=${org.version}`)).status()).toBe(204);
+  }
 });
 
 test('Fehler erhalten Eingaben; Beschäftigungszeiten und Wiedereintritt sind bedienbar', async ({ page, request }) => {

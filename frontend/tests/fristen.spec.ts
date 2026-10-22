@@ -1,0 +1,36 @@
+import { test, expect } from './fixtures';
+
+test('Frist zuordnen, wiedervorlegen, erledigen und direkt den stabilen Quelldatensatz öffnen', async ({ page, request }, testInfo) => {
+  const p = await request.post('/api/mitarbeiter', { data: { vorname: 'Fristen', nachname: 'Browser', wochenstunden: 32, eintrittsdatum: '2020-01-01' } });
+  expect(p.status()).toBe(201); const person = await p.json();
+  const pfad = `/api/mitarbeiter/${person.id}/personaldaten/erweiterungen`;
+  const d = (await (await request.get(pfad)).json()).daten;
+  d.vollmachten = [{ bezeichnung: 'Einkaufsfreigabe ' + person.id, ende: '2020-12-31' }, { bezeichnung: 'Unbefristete Vollmacht' }];
+  expect((await request.put(pfad, { data: d })).status()).toBe(200);
+  const fehler: string[] = []; page.on('pageerror', e => fehler.push(e.message));
+  await page.goto('/fristen');
+  const karte = page.getByRole('article', { name: `Einkaufsfreigabe ${person.id} – ${person.name}` });
+  await expect(karte.getByText('Überfällig', { exact: true })).toBeVisible();
+  await karte.getByRole('button', { name: 'Frist bearbeiten' }).click();
+  await karte.getByLabel('Zuständige Person').selectOption('e2eadmin');
+  await karte.getByLabel('Vorlauf in Tagen').fill('45');
+  await karte.getByLabel('Wiedervorlage am').fill('2030-01-15');
+  await karte.getByRole('button', { name: 'Frist speichern' }).click();
+  await expect(karte.getByText('e2eadmin', { exact: true })).toBeVisible();
+  await page.reload(); await expect(karte.getByText('15.01.2030', { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
+  await page.screenshot({ path: testInfo.outputPath('fristen-mobil.png'), fullPage: true });
+  await karte.getByRole('link', { name: 'Datensatz öffnen' }).click();
+  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  await expect(dialog.getByLabel('Bezeichnung der Vollmacht').first()).toHaveValue('Einkaufsfreigabe ' + person.id);
+  await expect(dialog.locator('[data-datensatz].frist-ziel')).toHaveCount(1);
+  await page.goto('/fristen');
+  await karte.getByRole('button', { name: 'Frist bearbeiten' }).click();
+  await karte.getByLabel('Erledigt', { exact: true }).check();
+  await karte.getByRole('button', { name: 'Frist speichern' }).click();
+  await expect(karte).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Anzeige', exact: true }).selectOption('ERLEDIGT');
+  await expect(karte.getByText('Erledigt', { exact: true })).toBeVisible();
+  expect(fehler).toEqual([]);
+});

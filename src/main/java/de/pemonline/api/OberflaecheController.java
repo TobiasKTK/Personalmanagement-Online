@@ -6,6 +6,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class OberflaecheController {
     // Ausschließlich bekannte Oberflächenpfade weiterleiten; API-Fehler bleiben API-Fehler.
-    @GetMapping({"/mitarbeiter", "/organisation", "/stellen", "/kenntnisse", "/ausbildung", "/kalender", "/urlaub", "/benachrichtigungen", "/dashboard", "/exporte", "/mandanten", "/mandanten/verwaltung", "/administration/mandanten", "/administration/organisationen", "/administration/konten", "/administration/planung"})
+    @GetMapping({"/fristen", "/personalprozesse", "/self-service", "/self-service/pruefung", "/mitarbeiter", "/organisation", "/stellen", "/kenntnisse", "/ausbildung", "/kalender", "/urlaub", "/benachrichtigungen", "/dashboard", "/exporte", "/mandanten", "/mandanten/verwaltung", "/administration/mandanten", "/administration/organisationen", "/administration/konten", "/administration/planung"})
     public String oberflaeche() { return "forward:/index.html"; }
+
+    @GetMapping({"/auswertungen", "/import", "/fortbildungen"})
+    public String personalAusbau() { return "forward:/index.html"; }
 }

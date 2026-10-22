@@ -1,0 +1,31 @@
+<section class="page-heading"><div><p class="eyebrow">Personalverwaltung</p><h1>Fristen und Wiedervorlagen</h1>
+  <p>Ablaufende Nachweise, Vollmachten und Beauftragungen gemeinsam im Blick behalten.</p></div>
+  <button class="button secondary" (click)="laden()" [disabled]="arbeitet()">Aktualisieren</button></section>
+@if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+@if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
+<section class="team-panel fristen-filter" aria-label="Fristen filtern">
+  <label class="field">Suche<input type="search" [ngModel]="suche()" (ngModelChange)="suche.set($event)" placeholder="Person oder Bezeichnung"></label>
+  <label class="field">Anzeige<select [ngModel]="filter()" (ngModelChange)="filter.set($event)"><option value="OFFEN">Offene Fristen</option><option value="UEBERFAELLIG">Überfällige Fristen</option><option value="ERLEDIGT">Erledigte Fristen</option><option value="ALLE">Alle Fristen</option></select></label>
+</section>
+@if (arbeitet() && !fristen().length) { <p role="status">Fristen werden geladen …</p> }
+<div class="fristen-liste" [attr.aria-busy]="arbeitet()">
+@for (f of sichtbar(); track f.id) {
+  <article class="team-panel frist" [attr.aria-label]="f.titel + ' – ' + f.person">
+    <div class="frist-kopf"><div><p class="eyebrow">{{ art(f) }} · {{ f.person }}</p><h2>{{ f.titel }}</h2></div><span class="frist-status" [class.ueberfaellig]="status(f) === 'Überfällig'">{{ status(f) }}</span></div>
+    <dl><div><dt>Ablauf</dt><dd>{{ f.ablauf | date:'dd.MM.yyyy' }}</dd></div><div><dt>Zuständig</dt><dd>{{ f.zustaendig || 'Noch nicht zugeordnet' }}</dd></div><div><dt>Erinnerung</dt><dd>{{ f.vorlaufTage }} Tage vorher</dd></div>@if (f.wiedervorlage) { <div><dt>Wiedervorlage</dt><dd>{{ f.wiedervorlage | date:'dd.MM.yyyy' }}</dd></div> }</dl>
+    <div class="frist-aktionen"><a class="button secondary" [href]="f.ziel">Datensatz öffnen</a><button class="button secondary" (click)="bearbeiten(f)" [disabled]="arbeitet()">Frist bearbeiten</button></div>
+    @if (auswahl(); as e) { @if (e.id === f.id) {
+      <form #formular="ngForm" (ngSubmit)="formular.valid && speichern()" class="frist-editor">
+        <fieldset [disabled]="arbeitet()"><legend>Frist bearbeiten</legend>
+          <label class="field">Zuständige Person<select name="zustaendig" [(ngModel)]="e.zustaendig"><option [ngValue]="null">Ohne Zuordnung</option>@for (konto of zustaendige(); track konto.name) { <option [value]="konto.name">{{ konto.name }}</option> }</select></label>
+          <label class="field">Vorlauf in Tagen<input name="vorlauf" type="number" required min="0" max="3650" step="1" [(ngModel)]="e.vorlaufTage"></label>
+          <label class="field">Wiedervorlage am<input name="wiedervorlage" type="date" min="0001-01-01" max="9999-12-31" [(ngModel)]="e.wiedervorlage"></label>
+          <label class="frist-checkbox"><input name="erledigt" type="checkbox" [(ngModel)]="e.erledigt">Erledigt</label>
+        </fieldset>
+        <p>Eine Wiedervorlage ersetzt den Erinnerungstermin. Das Ablaufdatum im Datensatz bleibt erhalten. Ein geändertes Ablaufdatum öffnet die Frist erneut.</p>
+        <div class="frist-aktionen"><button class="button primary" type="submit" [disabled]="arbeitet() || formular.invalid">Frist speichern</button><button class="button secondary" type="button" (click)="auswahl.set(null)" [disabled]="arbeitet()">Abbrechen</button></div>
+      </form>
+    } }
+  </article>
+} @empty { @if (!arbeitet()) { <p class="team-panel" role="status">Keine Fristen für diese Auswahl. Fristen entstehen aus Datensätzen mit Ablaufdatum.</p> } }
+</div>

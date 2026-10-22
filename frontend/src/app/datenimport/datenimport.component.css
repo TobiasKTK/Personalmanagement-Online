@@ -1,0 +1,14 @@
+:host { display: block; min-width: 0; }
+.import-panel { min-width: 0; }
+.import-panel h2 { margin-top: 1.5rem; }
+.import-panel form { margin-block: 1rem; }
+.import-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; align-items: end; margin-bottom: 1rem; }
+.import-panel fieldset { min-width: 0; }
+.import-panel input[type=file] { width: 100%; min-width: 0; }
+.import-panel td { vertical-align: top; overflow-wrap: anywhere; }
+.import-panel details { margin-block: .75rem; }
+.import-panel summary { cursor: pointer; }
+.import-panel dl { margin: .75rem 0; }
+.import-panel dt { font-weight: 600; }
+.import-panel dd { margin: 0 0 .5rem; }
+.import-fehler { margin: 0; padding-left: 1rem; }

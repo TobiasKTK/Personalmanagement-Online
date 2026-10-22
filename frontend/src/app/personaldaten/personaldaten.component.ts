@@ -24,6 +24,8 @@ registerLocaleData(localeDe);
 export class PersonaldatenComponent implements AfterViewInit {
   private readonly http = inject(HttpClient);
   readonly person = input.required<Mitarbeiter>();
+  readonly fristBereich = input('');
+  readonly fristDatensatz = input('');
   readonly geschlossen = output<void>();
   @ViewChild(ErweiterungenComponent) private erweiterungen?: ErweiterungenComponent;
   erweiterungenBesucht = false;
@@ -51,7 +53,13 @@ export class PersonaldatenComponent implements AfterViewInit {
   planstelleId: number | null = null;
   private original = '';
   private fokus: HTMLElement | null = null;
-  ngAfterViewInit(): void { this.fokus = document.activeElement as HTMLElement; this.dialog.nativeElement.showModal(); void this.laden(); }
+  ngAfterViewInit(): void {
+    this.fokus = document.activeElement as HTMLElement; this.dialog.nativeElement.showModal();
+    if (['vollmachten', 'beauftragungen', 'fortbildungen'].includes(this.fristBereich())) {
+      this.bereich = 'Ergänzungen'; this.erweiterungenBesucht = true;
+    }
+    void this.laden();
+  }
   private basisGeaendert(): boolean { return !!this.daten() && JSON.stringify(this.daten()) !== this.original; }
   geaendert(): boolean {
     return this.basisGeaendert() || Object.values(this.zeit).some(Boolean) || !!this.neuerEintritt || this.planstelleId !== null

@@ -13,4 +13,5 @@ export interface Personaldaten {
 export interface Beschaeftigungszeit { id: number; beginn: string; ende: string; austrittsgrund: string; kuendigungsdatum: string | null; }
 export interface Personalakte { person: Mitarbeiter; daten: Personaldaten; fruehereZeiten: Beschaeftigungszeit[]; betriebszugehoerigkeitTage: number; stichtag: string; profilName: string; }
 export interface Revision { id: number; zeitpunkt: string; bearbeiter: string; daten: Personaldaten; person: Mitarbeiter; fruehereZeiten: Beschaeftigungszeit[]; profilName: string; }
-export interface Personaldokument { id: number; titel: string; art: string; quelle: string; monat: string; dateiname: string; groesse: number; erstelltAm: string; }
+export interface Personaldokument { id: number; titel: string; art: string; quelle: string; monat: string; dateiname: string; groesse: number; erstelltAm: string; selfserviceFreigegeben: boolean; version: number; familieId: number; dokumentVersion: number; }
+export interface Dokumentbedarf { version: number; benoetigt: string[]; vorhanden: string[]; fehlend: string[]; }

@@ -1,0 +1,26 @@
+:host { display: block; min-width: 0; }
+.rueckmeldung { min-height: 1.5rem; }
+.banner.warn { color: var(--warning); background: var(--warning-soft); }
+.kennzahlen { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin: var(--space-5) 0; }
+.kennzahlen > div { min-width: 0; border-left: 3px solid var(--primary); padding-left: var(--space-3); }
+.kennzahlen span { color: var(--muted); font-size: .875rem; display: block; overflow-wrap: anywhere; }
+.kennzahlen strong { display: block; font-size: 1.75rem; font-variant-numeric: tabular-nums; }
+.grundlagen { padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-subtle); }
+.grundlagen ul { padding-left: var(--space-5); margin-bottom: 0; }
+.grundlagen li { margin-top: var(--space-2); overflow-wrap: anywhere; }
+.grundlagen p { margin-bottom: 0; }
+section > section { margin-top: var(--space-6); }
+section > h2 { margin-bottom: var(--space-3); }
+.leer { padding: var(--space-4); background: var(--surface-subtle); color: var(--muted); }
+tbody th { font-weight: 600; color: var(--text); background: transparent; }
+.personalnummer { display: block; color: var(--muted); font-weight: 400; font-size: .8125rem; }
+.table-scroll { margin-top: var(--space-3); }
+.pagination { padding-inline: 0; }
+.pagination > div { flex-wrap: wrap; }
+@media (max-width: 900px) { .kennzahlen { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 450px) {
+  .kennzahlen { grid-template-columns: minmax(0, 1fr); }
+  .administration { padding: var(--space-3); }
+  .filter-grid > .button { width: 100%; }
+  .grundlagen { padding: var(--space-3); }
+}

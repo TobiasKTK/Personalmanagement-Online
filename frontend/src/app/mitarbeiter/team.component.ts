@@ -34,6 +34,7 @@ export class TeamComponent implements OnInit {
   @ViewChild(MitarbeiterEditorComponent) private editor?: MitarbeiterEditorComponent;
   @ViewChild(PersonaldatenComponent) private personaldatenDialog?: PersonaldatenComponent;
   readonly personaldaten = signal<Mitarbeiter | null>(null);
+  readonly fristZiel = signal({ bereich: '', datensatz: '' });
 
   readonly groesse = 10;
   readonly seite = signal(0);
@@ -86,6 +87,12 @@ export class TeamComponent implements OnInit {
       const seite = Number(p.get('seite') ?? 0);
       this.seite.set(Number.isSafeInteger(seite) && seite >= 0 ? seite : 0);
       void this.laden();
+      const personId = Number(p.get('personaldatenId'));
+      if (Number.isSafeInteger(personId) && personId > 0 && this.darfSchreiben()) {
+        this.fristZiel.set({ bereich: p.get('erweiterung') ?? '', datensatz: p.get('datensatz') ?? '' });
+        void firstValueFrom(this.api.finden(personId)).then(person => this.personaldaten.set(person))
+          .catch(e => this.ladefehler.set(this.fehlertext(e)));
+      }
     });
   }
   verlassenErlauben(): boolean | Promise<boolean> {
@@ -94,6 +101,10 @@ export class TeamComponent implements OnInit {
 
   async personaldatenSchliessen(id: number): Promise<void> {
     this.personaldaten.set(null);
+    this.fristZiel.set({ bereich: '', datensatz: '' });
+    if (this.route.snapshot.queryParamMap.has('personaldatenId')) await this.router.navigate([], {
+      relativeTo: this.route, queryParamsHandling: 'merge', queryParams: { personaldatenId: null, erweiterung: null, datensatz: null }, replaceUrl: true,
+    });
     await this.laden();
     setTimeout(() => this.element.nativeElement.querySelector<HTMLButtonElement>(`button[data-personaldaten-id="${id}"]`)?.focus());
   }

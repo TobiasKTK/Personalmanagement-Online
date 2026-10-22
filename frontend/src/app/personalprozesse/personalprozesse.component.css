@@ -1,0 +1,28 @@
+:host { display: block; min-width: 0; }
+.prozess-kopf, .filter-zeile, .suche-zeile { display: flex; align-items: end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.prozess-kopf { align-items: start; margin-bottom: 1.5rem; }
+h1 { margin: .25rem 0 .75rem; } h3 { margin: .3rem 0; }
+.eyebrow { color: #536270; font-size: .85rem; font-weight: 600; margin: 0; }
+.prozess-panel { background: #fff; border: 1px solid #dbe2e7; border-radius: .7rem; padding: 1.25rem; margin-bottom: 1.25rem; min-width: 0; }
+summary { cursor: pointer; font-weight: 650; font-size: 1.1rem; }
+fieldset { border: 0; padding: 0; margin: .8rem 0; min-width: 0; }
+legend { font-weight: 600; margin-bottom: .6rem; }
+.prozess-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.field { min-width: 0; } input, select { width: 100%; max-width: 100%; }
+.suche-zeile .field { flex: 1; }
+.hinweis { color: #536270; font-size: .9rem; line-height: 1.5; }
+.vorlagen-liste, .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-top: .8rem; }
+.vorlagen-aufgabe { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: .8rem; align-items: end; margin: 1rem 0; }
+.aufgaben-liste { display: grid; gap: 1rem; margin: 1rem 0; }
+.aufgabe { display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, .7fr); gap: 1rem; padding: 1rem; border: 1px solid #dbe2e7; border-left: 4px solid #668a85; border-radius: .4rem; overflow-wrap: anywhere; }
+.aufgabe p { margin: .45rem 0; }
+.aufgabe.ueberfaellig { border-left-color: #aa551c; }
+.frist-hinweis { color: #904619; font-weight: 600; }
+.zuordnung { grid-column: 1 / -1; border-top: 1px solid #dbe2e7; }
+@media (max-width: 700px) {
+  .prozess-grid, .vorlagen-aufgabe, .aufgabe { grid-template-columns: minmax(0, 1fr); }
+  .prozess-panel { padding: .85rem; }
+  .button { white-space: normal; max-width: 100%; }
+  .suche-zeile { align-items: stretch; }
+  .suche-zeile .field { flex-basis: 100%; }
+}

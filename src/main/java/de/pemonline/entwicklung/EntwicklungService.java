@@ -85,7 +85,8 @@ public class EntwicklungService {
             versionPruefen("kenntnis", id, eingabe.version());
             String bisherigeKategorie = jdbc.sql("SELECT kategorie FROM kenntnis WHERE id = :id").param("id", id).query(String.class).single();
             if (!bisherigeKategorie.equals(eingabe.kategorie().name()) && (anzahl("SELECT COUNT(*) FROM stellenanforderung WHERE kenntnis_id = :id", id) > 0
-                    || anzahl("SELECT COUNT(*) FROM mitarbeiter_kenntnis WHERE kenntnis_id = :id", id) > 0))
+                    || anzahl("SELECT COUNT(*) FROM mitarbeiter_kenntnis WHERE kenntnis_id = :id", id) > 0
+                    || anzahl("SELECT COUNT(*) FROM schulung WHERE kenntnis_id = :id", id) > 0))
                 throw new FachlicherFehler(KONFLIKT, "Die Kategorie einer verwendeten Kenntnis kann nicht geändert werden.");
         }
         var spaltenwerte = new LinkedHashMap<String, Object>();

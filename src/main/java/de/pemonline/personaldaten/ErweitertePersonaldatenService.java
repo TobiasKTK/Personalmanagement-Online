@@ -24,9 +24,11 @@ public class ErweitertePersonaldatenService {
     private final MitarbeiterRepository mitarbeiter;
     private final ObjectMapper json;
     private final Clock clock;
-    public ErweitertePersonaldatenService(JdbcClient jdbc, MitarbeiterRepository mitarbeiter, ObjectMapper json, Clock clock) {
-        this.jdbc = jdbc; this.mitarbeiter = mitarbeiter; this.json = json; this.clock = clock;
+    private final ErweiterungsReferenzen referenzen;
+    public ErweitertePersonaldatenService(JdbcClient jdbc, MitarbeiterRepository mitarbeiter, ObjectMapper json, Clock clock, ErweiterungsReferenzen referenzen) {
+        this.jdbc = jdbc; this.mitarbeiter = mitarbeiter; this.json = json; this.clock = clock; this.referenzen = referenzen;
     }
+    @Transactional
     public Akte lesen(@Positive long person) {
         var heute = LocalDate.now(clock);
         var m = mitarbeiter.finden(person, heute).orElseThrow(ErweitertePersonaldatenService::fehlt);
@@ -57,10 +59,17 @@ public class ErweitertePersonaldatenService {
         return lesen(person);
     }
     private Daten daten(long person) {
+        referenzen.ergaenzen(person);
         return jdbc.sql("SELECT daten FROM personaldaten_erweiterung WHERE mitarbeiter_id = :id").param("id", person)
             .query(String.class).optional().map(s -> json.readValue(s, Daten.class)).orElseGet(Daten::leer);
     }
     private static void pruefen(Daten e) {
+        var ids = new java.util.HashSet<java.util.UUID>();
+        var referenzen = new java.util.ArrayList<java.util.UUID>();
+        e.vollmachten().forEach(v -> referenzen.add(v.id()));
+        e.beauftragungen().forEach(v -> referenzen.add(v.id()));
+        e.fortbildungen().forEach(v -> referenzen.add(v.id()));
+        for (var id : referenzen) if (!ids.add(id)) throw ungueltig("Eine Datensatzreferenz darf nicht mehrfach vorkommen.");
         for (var k : e.kontakte()) if (k.telefon().isBlank() && k.email().isBlank())
             throw ungueltig("Bitte zu jedem Kontakt mindestens Telefon oder E-Mail angeben.");
         for (var v : e.vollmachten()) zeitraum(v.beginn(), v.ende());

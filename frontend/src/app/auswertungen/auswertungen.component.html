@@ -1,0 +1,88 @@
+<section class="team-panel administration" aria-labelledby="auswertung-titel">
+  <h1 id="auswertung-titel">HR-Auswertungen</h1>
+  <p>Beschäftigung, Stellen und Qualifikationsbedarf für {{ sitzung.sitzung()?.firma || 'die aktive Firma' }}.</p>
+  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  <p class="rueckmeldung" role="status" aria-live="polite">{{ arbeitet() ? 'Auswertung wird geladen …' : exportiert() ? 'Export wird erstellt …' : meldung() }}</p>
+  <form (ngSubmit)="aktualisieren()">
+    <fieldset [disabled]="arbeitet() || exportiert()">
+      <legend>Auswahl</legend>
+      <div class="filter-grid">
+        <label class="field">Organisationseinheit
+          <select name="organisation" [(ngModel)]="organisation">
+            <option [ngValue]="null">Alle Organisationseinheiten</option>
+            @for (o of organisationen(); track o.id) { <option [ngValue]="o.id">{{ o.name }}</option> }
+          </select>
+        </label>
+        <label class="field">Stichtag<input type="date" name="stichtag" [(ngModel)]="stichtag" min="0001-01-01" max="9999-12-31" required></label>
+        <button class="button primary" type="submit">Auswertung aktualisieren</button>
+        <button class="button secondary" type="button" [disabled]="filterGeaendert()" (click)="exportieren()">CSV herunterladen</button>
+      </div>
+    </fieldset>
+  </form>
+  @if (ergebnis(); as r) {
+    @if (filterGeaendert()) { <p class="banner warn">Die Auswahl wurde geändert. Bitte die Auswertung aktualisieren. Angezeigt wird weiterhin der Stand vom {{ datum(r.stichtag) }}.</p> }
+    <div class="kennzahlen" [attr.aria-busy]="arbeitet()">
+      <div><span>Beschäftigte am {{ datum(r.stichtag) }}</span><strong>{{ zahl(r.beschaeftigte) }}</strong></div>
+      <div><span>FTE aus bekannter Historie</span><strong>{{ zahl(r.fte) }}</strong></div>
+      <div><span>Offene Planstellen · aktuell</span><strong>{{ zahl(r.offeneStellen.gesamt) }}</strong></div>
+      <div><span>Qualifikationslücken</span><strong>{{ zahl(r.qualifikationsluecken.gesamt) }}</strong></div>
+    </div>
+    <p><strong>Aktuelle Vollzeitbasis: {{ zahl(r.vollzeitWochenstunden) }} Stunden pro Woche.</strong> Bekannte Wochenstunden in der Auswahl: {{ zahl(r.wochenstunden) }}.</p>
+    @if (r.historieUnbekanntFirma > 0) {
+      <p class="banner warn">Für {{ zahl(r.historieUnbekanntFirma) }} Beschäftigte in der Firma fehlt die Historie zum Stichtag. Ihre Stunden und FTE sind unbekannt. Bei einer einzelnen Organisation können sie nicht zugeordnet werden.</p>
+    }
+    <section aria-labelledby="grundlagen-titel" class="grundlagen">
+      <h2 id="grundlagen-titel">Grundlagen der Auswertung</h2>
+      <ul>@for (hinweis of r.hinweise; track hinweis) { <li>{{ hinweis }}</li> }</ul>
+      <p>Die CSV enthält alle Treffer dieser Auswahl, unabhängig von den sichtbaren Seiten. Sie wird beim Download neu ermittelt.</p>
+    </section>
+
+    <section aria-labelledby="organisationen-titel">
+      <h2 id="organisationen-titel">Beschäftigte und FTE nach Organisation</h2>
+      @if (r.organisationen.gesamt === 0) { <p class="leer">Keine Beschäftigten in dieser Auswahl.</p> }
+      @else {
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Organisationstabelle horizontal scrollen">
+          <table aria-labelledby="organisationen-titel"><thead><tr><th scope="col">Organisation</th><th scope="col">Beschäftigte</th><th scope="col">Wochenstunden</th><th scope="col">FTE</th><th scope="col">Historie</th></tr></thead>
+            <tbody>@for (o of r.organisationen.eintraege; track $index) {
+              <tr><th scope="row">{{ o.organisation }}</th><td>{{ zahl(o.beschaeftigte) }}</td><td>{{ zahl(o.wochenstunden) }}</td><td>{{ zahl(o.fte) }}</td><td>{{ o.historieBekannt ? 'Bekannt' : 'Unbekannt' }}</td></tr>
+            }</tbody></table>
+        </div>
+        <nav class="pagination" aria-label="Organisationsseiten">
+          <span>Seite {{ r.organisationen.seite + 1 }} von {{ seitenzahl(r.organisationen) }} · {{ r.organisationen.gesamt }} Gruppen</span>
+          <div><button type="button" class="button secondary compact" [disabled]="arbeitet() || filterGeaendert() || r.organisationen.seite === 0" (click)="blaettern('organisationsSeite', r.organisationen.seite - 1)">Vorherige</button><button type="button" class="button secondary compact" [disabled]="arbeitet() || filterGeaendert() || r.organisationen.seite + 1 >= seitenzahl(r.organisationen)" (click)="blaettern('organisationsSeite', r.organisationen.seite + 1)">Nächste</button></div>
+        </nav>
+      }
+    </section>
+    <section aria-labelledby="stellen-titel">
+      <h2 id="stellen-titel">Offene Planstellen · aktuelle Besetzung</h2>
+      @if (r.offeneStellen.gesamt === 0) { <p class="leer">Keine offenen Planstellen in dieser Auswahl.</p> }
+      @else {
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Planstellentabelle horizontal scrollen">
+          <table aria-labelledby="stellen-titel"><thead><tr><th scope="col">Planstelle</th><th scope="col">Organisation</th><th scope="col">Profil</th><th scope="col">Anteil</th></tr></thead>
+            <tbody>@for (s of r.offeneStellen.eintraege; track s.id) { <tr><th scope="row">{{ s.bezeichnung }}</th><td>{{ s.organisation }}</td><td>{{ s.profil }}</td><td>{{ zahl(s.anteil) }}</td></tr> }</tbody></table>
+        </div>
+        <nav class="pagination" aria-label="Planstellenseiten">
+          <span>Seite {{ r.offeneStellen.seite + 1 }} von {{ seitenzahl(r.offeneStellen) }} · {{ r.offeneStellen.gesamt }} Planstellen</span>
+          <div><button type="button" class="button secondary compact" [disabled]="arbeitet() || filterGeaendert() || r.offeneStellen.seite === 0" (click)="blaettern('stellenSeite', r.offeneStellen.seite - 1)">Vorherige</button><button type="button" class="button secondary compact" [disabled]="arbeitet() || filterGeaendert() || r.offeneStellen.seite + 1 >= seitenzahl(r.offeneStellen)" (click)="blaettern('stellenSeite', r.offeneStellen.seite + 1)">Nächste</button></div>
+        </nav>
+      }
+    </section>
+    <section aria-labelledby="bedarf-titel">
+      <h2 id="bedarf-titel">Qualifikationslücken</h2>
+      @if (r.qualifikationsluecken.gesamt === 0) { <p class="leer">Keine Qualifikationslücken in dieser Auswahl.</p> }
+      @else {
+        <p>Je Person und Kenntnis zählt die höchste Anforderung aller aktuell zugeordneten Planstellen.</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Qualifikationstabelle horizontal scrollen">
+          <table aria-labelledby="bedarf-titel"><thead><tr><th scope="col">Person</th><th scope="col">Organisation</th><th scope="col">Kenntnis</th><th scope="col">Soll</th><th scope="col">Ist</th><th scope="col">Fehlend</th><th scope="col">Grund</th><th scope="col">Aktion</th></tr></thead>
+            <tbody>@for (b of r.qualifikationsluecken.eintraege; track b.mitarbeiterId + ':' + b.kenntnisId) {
+              <tr><th scope="row">{{ b.name }}<span class="personalnummer">Nr. {{ b.personalnummer }}</span></th><td>{{ b.organisation }}</td><td>{{ b.kenntnis }}</td><td>{{ b.soll }}</td><td>{{ b.ist }}</td><td>{{ b.differenz }}</td><td>{{ b.grund }}</td><td><a class="button secondary compact" routerLink="/fortbildungen" [queryParams]="{ mitarbeiterId: b.mitarbeiterId, kenntnisId: b.kenntnisId, niveau: b.soll }" [attr.aria-label]="'Schulung vorbereiten für ' + b.name + ': ' + b.kenntnis">Schulung vorbereiten</a></td></tr>
+            }</tbody></table>
+        </div>
+        <nav class="pagination" aria-label="Qualifikationsseiten">
+          <span>Seite {{ r.qualifikationsluecken.seite + 1 }} von {{ seitenzahl(r.qualifikationsluecken) }} · {{ r.qualifikationsluecken.gesamt }} Lücken</span>
+          <div><button type="button" class="button secondary compact" [disabled]="arbeitet() || filterGeaendert() || r.qualifikationsluecken.seite === 0" (click)="blaettern('bedarfsSeite', r.qualifikationsluecken.seite - 1)">Vorherige</button><button type="button" class="button secondary compact" [disabled]="arbeitet() || filterGeaendert() || r.qualifikationsluecken.seite + 1 >= seitenzahl(r.qualifikationsluecken)" (click)="blaettern('bedarfsSeite', r.qualifikationsluecken.seite + 1)">Nächste</button></div>
+        </nav>
+      }
+    </section>
+  }
+</section>

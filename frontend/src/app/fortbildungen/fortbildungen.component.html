@@ -1,0 +1,73 @@
+<section class="team-panel administration" aria-label="Fortbildungsplanung" [attr.aria-busy]="arbeitet()">
+  <h1>Fortbildungsplanung</h1>
+  <p>Schulungsbedarf in Termine überführen, Personen zuordnen und erworbene Kenntnisse nachweisen.</p>
+  @if (fehler()) { <p role="alert" class="banner error">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  @if (arbeitet()) { <p class="ladehinweis">Daten werden verarbeitet …</p> }
+  <div class="actions"><button type="button" class="button secondary" (click)="neuLaden()" [disabled]="arbeitet()">Daten neu laden</button></div>
+  @if (geladen()) {
+    <details open><summary>Schulung aus einem Bedarf vorbereiten</summary>
+      <p>Es gelten die aktuellen Stellenanforderungen und die zum Stichtag gültigen Kenntnisnachweise.</p>
+      <form #bedarfForm="ngForm" (ngSubmit)="abgleichen()"><fieldset [disabled]="arbeitet()"><legend>Schulungsbedarf</legend><div class="filter-grid">
+        <label class="field">Person für Schulungsbedarf<select name="bedarfPerson" [(ngModel)]="personId" (ngModelChange)="abgeglichen.set(false)"><option [ngValue]="0">Bitte wählen</option>@for (p of personen(); track p.id) { <option [ngValue]="p.id">{{ p.name }} · {{ p.personalnummer }}</option> }</select></label>
+        <label class="field">Vergleichsprofil<select name="profil" [(ngModel)]="profilId" (ngModelChange)="abgeglichen.set(false)"><option [ngValue]="null">Alle besetzten Planstellen dieser Person</option>@for (p of profile(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select></label>
+        <label class="field">Stichtag für Schulungsbedarf<input name="stichtag" type="date" [(ngModel)]="stichtag" (ngModelChange)="abgeglichen.set(false)" required></label>
+      </div><button class="button primary" [disabled]="!personId || bedarfForm.invalid">Schulungsbedarf ermitteln</button></fieldset></form>
+      @if (abgeglichen()) { <ul class="management-list">@for (a of ergebnis(); track a.kenntnisId) {
+        <li><div><strong>{{ a.name }}</strong><p>Soll {{ a.soll }} · Ist {{ a.ist }} · {{ a.grund }}</p></div><button type="button" class="button secondary" (click)="vorbereitet(a)" [disabled]="arbeitet()">Schulung für {{ a.name }} vorbereiten</button></li>
+      } @empty { <li>Kein Schulungsbedarf gefunden. Es fehlen Anforderungen oder alle Anforderungen sind erfüllt.</li> }</ul> }
+    </details>
+
+    <h2>Schulungen</h2>
+    <div class="filter-grid">
+      <label class="field">Schulung auswählen<select [(ngModel)]="schulungId" (ngModelChange)="waehlen()" [disabled]="arbeitet()"><option [ngValue]="0">Neue Schulung</option>@for (s of schulungen(); track s.id) { <option [ngValue]="s.id">{{ s.titel }} · {{ s.beginn }} · {{ s.teilnahmen.length }} Teilnehmende</option> }</select></label>
+      <button type="button" class="button secondary" (click)="neu()" [disabled]="arbeitet()">Neue Schulung</button>
+    </div>
+    @if (!schulungen().length) { <p>Noch keine Schulungen geplant. Lege die erste Schulung an oder übernimm einen Bedarf.</p> }
+    @if (!katalog().length) { <p>Zuerst eine <a routerLink="/kenntnisse">Kenntnis im Katalog anlegen</a>.</p> }
+    @if (hatAbschluss()) { <p class="hinweis">Die Schulungsangaben bleiben nach dem ersten Abschluss unveränderlich. Weitere Teilnehmende können zugeordnet werden.</p> }
+    <form #schulungsForm="ngForm" (ngSubmit)="speichern()"><fieldset [disabled]="arbeitet() || hatAbschluss() || !!teilnahme()"><legend>{{ entwurf.id ? 'Schulungsangaben' : 'Schulung anlegen' }}</legend>
+      <div class="filter-grid">
+        <label class="field">Schulungstitel<input #titelFeld name="titel" [(ngModel)]="entwurf.titel" required maxlength="160"></label>
+        <label class="field">Anbieter<input name="anbieter" [(ngModel)]="entwurf.anbieter" maxlength="240"></label>
+        <label class="field">Schulungsbeginn<input name="beginn" type="date" [(ngModel)]="entwurf.beginn" required></label>
+        <label class="field">Schulungsende<input name="ende" type="date" [(ngModel)]="entwurf.ende" [min]="entwurf.beginn" required></label>
+        <label class="field">Zu erreichende Kenntnis<select name="kenntnis" [(ngModel)]="entwurf.kenntnisId" required><option [ngValue]="0" disabled>Bitte wählen</option>@for (k of katalog(); track k.id) { <option [ngValue]="k.id">{{ k.name }}</option> }</select></label>
+        <label class="field">Zielniveau<input name="niveau" type="number" [(ngModel)]="entwurf.niveau" min="1" max="5" step="1" required></label>
+      </div><p>Niveau: 1 Grundlagen · 2 Basis · 3 selbstständig · 4 fortgeschritten · 5 Experte.</p>
+      <div class="actions"><button class="button primary" [disabled]="schulungsForm.invalid || !entwurf.kenntnisId">Schulung speichern</button>
+      @if (ausgewaehlt()) { <button type="button" class="button secondary" (click)="loeschen()">Schulung löschen</button> }</div>
+    </fieldset></form>
+
+    @if (ausgewaehlt(); as s) {
+      <section aria-label="Teilnehmende der Schulung"><h2>Teilnehmende · {{ s.titel }}</h2>
+        <p>Eine Zuordnung erzeugt noch keinen Kenntnisnachweis. Jede Teilnahme wird einzeln abgeschlossen.</p>
+        @if (ungespeichert()) { <p class="hinweis">Bitte zuerst die geänderten Schulungsangaben speichern, bevor Teilnahmen bearbeitet werden.</p> }
+        <fieldset [disabled]="arbeitet() || !!teilnahme() || ungespeichert()"><legend>Personen zuordnen</legend>
+          <label class="field">Personen suchen<input type="search" [(ngModel)]="personenSuche" placeholder="Name oder Personalnummer"></label>
+          <div class="personenauswahl">@for (p of verfuegbarePersonen(); track p.id) { <label class="check-field"><input type="checkbox" [checked]="auswahl.includes(p.id)" (change)="personWaehlen(p.id)"><span>{{ p.name }} · {{ p.personalnummer }}</span></label> } @empty { <p>Keine weiteren passenden Personen gefunden.</p> }</div>
+          <button type="button" class="button primary" (click)="zuordnen()" [disabled]="!auswahl.length || auswahl.length > 500">Ausgewählte Personen zuordnen</button><p>{{ auswahl.length }} Personen ausgewählt · maximal 500 pro Zuordnung</p>
+        </fieldset>
+        <ul class="management-list">@for (t of s.teilnahmen; track t.mitarbeiterId) {
+          <li><div><strong>{{ t.name }} · {{ t.personalnummer }}</strong>
+            @if (t.abgeschlossen) { <p>Abgeschlossen · Niveau {{ t.niveau }} · erworben {{ t.erworbenAm }} · gültig bis {{ t.gueltigBis || 'unbefristet' }}</p><p class="nachweistext">{{ t.nachweis }}</p> }
+            @else { <p>Teilnahme geplant</p> }
+          </div>@if (!t.abgeschlossen) { <div class="actions"><button type="button" class="button primary" (click)="abschlussOeffnen(t)" [disabled]="arbeitet() || !!teilnahme() || ungespeichert()">{{ t.name }} Teilnahme abschließen</button><button type="button" class="button secondary" (click)="entfernen(t)" [disabled]="arbeitet() || !!teilnahme() || ungespeichert()">{{ t.name }} abmelden</button></div> }</li>
+        } @empty { <li>Noch keine Personen zugeordnet.</li> }</ul>
+        @if (teilnahme(); as t) {
+          <form #abschlussForm="ngForm" (ngSubmit)="abschliessen()"><fieldset [disabled]="arbeitet()"><legend>Abschluss für {{ t.name }}</legend>
+            <p>{{ kenntnisName(s.kenntnisId) }} · erworbenes Niveau {{ s.niveau }}. Diese Teilnahme und ihr Nachweis werden gemeinsam gespeichert.</p>
+            @if (vorhandenerNachweis(); as n) { <div class="hinweis"><strong>Vorhandener Kenntnisnachweis wird ersetzt</strong><p>Niveau {{ n.niveau }} · erworben {{ n.erworbenAm }} · gültig bis {{ n.gueltigBis || 'unbefristet' }}</p><p class="nachweistext">{{ n.nachweis }}</p></div> }
+            <div class="filter-grid">
+              <label class="field">Erworben am<input #abschlussFeld name="erworben" type="date" [(ngModel)]="abschluss.erworbenAm" [min]="s.beginn" required></label>
+              <label class="field">Gültig bis (optional)<input name="gueltig" type="date" [(ngModel)]="abschluss.gueltigBis" [min]="abschluss.erworbenAm"></label>
+              <label class="field">Nachweis / Zertifikatsnummer<textarea name="nachweis" [(ngModel)]="abschluss.nachweis" required maxlength="1000" rows="3"></textarea></label>
+            </div>
+            @if (vorhandenerNachweis()) { <label class="check-field"><input name="ersetzen" type="checkbox" [(ngModel)]="ersetzen"><span>Vorhandenen Nachweis ausdrücklich ersetzen</span></label> }
+            <div class="actions"><button class="button primary" [disabled]="abschlussForm.invalid || (!!vorhandenerNachweis() && !ersetzen)">Teilnahme abschließen und Nachweis speichern</button><button type="button" class="button secondary" (click)="abschlussAbbrechen()">Abschluss abbrechen</button></div>
+          </fieldset></form>
+        }
+      </section>
+    }
+  }
+</section>

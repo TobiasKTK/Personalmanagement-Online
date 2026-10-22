@@ -1,0 +1,43 @@
+<header class="page-heading"><div><p class="eyebrow">MITARBEITER-SERVICE</p><h1>{{ pruefung ? 'Datenänderungen prüfen' : 'Meine Daten und Dokumente' }}</h1><p class="subtitle">{{ pruefung ? 'Eingereichte Änderungen vergleichen und nachvollziehbar entscheiden.' : 'Kontaktdaten und Bankverbindung ändern lassen und freigegebene Abrechnungen abrufen.' }}</p></div></header>
+<nav class="aktionen" aria-label="Self-Service"><a class="button secondary" routerLink="/self-service">Meine Daten</a>@if (personal()) { <a class="button secondary" routerLink="/self-service/pruefung">Änderungen prüfen</a> }<button class="button secondary" (click)="laden()" [disabled]="arbeitet()">Aktualisieren</button></nav>
+@if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+@if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }
+@if (arbeitet() && !geladen()) { <p role="status">Daten werden geladen …</p> }
+@if (!pruefung) {
+  @if (profil(); as p) {
+    <section class="team-panel bereich"><h2>{{ p.name }}</h2><p>Änderungen werden von der Personalverwaltung geprüft. Die E-Mail-Adresse für Ihre Anmeldung bleibt unverändert.</p>
+      <div class="formulare">
+        <form (ngSubmit)="einreichen('KONTAKT')"><fieldset [disabled]="arbeitet() || offen('KONTAKT')"><legend>Kontaktdaten</legend>
+          <label class="field">Telefonnummer<input name="telefon" [(ngModel)]="kontakt.telefon" maxlength="80" autocomplete="tel"></label>
+          <label class="field">E-Mail-Adresse<input name="email" type="email" [(ngModel)]="kontakt.email" maxlength="254" autocomplete="email"></label>
+          <button class="button primary" type="submit">Kontaktänderung einreichen</button>
+        </fieldset>@if (offen('KONTAKT')) { <p>Ihre Kontaktänderung wartet auf Prüfung.</p> }</form>
+        <form (ngSubmit)="einreichen('BANK')"><fieldset [disabled]="arbeitet() || offen('BANK')"><legend>Bankverbindung</legend>
+          <label class="field">Kontoinhaber<input name="kontoinhaber" [(ngModel)]="bank.kontoinhaber" maxlength="120"></label>
+          <label class="field">IBAN<input name="iban" [(ngModel)]="bank.iban" maxlength="42" autocapitalize="characters" spellcheck="false"></label>
+          <label class="field">BIC<input name="bic" [(ngModel)]="bank.bic" maxlength="11" autocapitalize="characters" spellcheck="false"></label>
+          <label class="field">Institut<input name="institut" [(ngModel)]="bank.institut" maxlength="120"></label>
+          <button class="button primary" type="submit">Bankänderung einreichen</button>
+        </fieldset>@if (offen('BANK')) { <p>Ihre Bankänderung wartet auf Prüfung.</p> }</form>
+      </div>
+    </section>
+    <section class="team-panel bereich"><h2>Meine Gehaltsdokumente</h2><p>Hier erscheinen ausschließlich Ihre ausdrücklich freigegebenen Abrechnungen.</p>
+      @for (d of dokumente(); track d.id) { <div class="dokumentzeile"><span><strong>{{ d.titel }}</strong> · {{ d.monat }}</span><button class="button secondary" (click)="ansehen(d)" [disabled]="arbeitet()" [attr.aria-label]="d.titel + ' ansehen'">Ansehen</button></div> }
+      @empty { <p>Noch keine freigegebenen Gehaltsdokumente.</p> }
+      @if (dokumentGesamt() > 20) { <div class="aktionen"><button class="button secondary" (click)="dokumentSeite = dokumentSeite - 1; laden()" [disabled]="arbeitet() || dokumentSeite === 0">Vorherige Dokumente</button><button class="button secondary" (click)="dokumentSeite = dokumentSeite + 1; laden()" [disabled]="arbeitet() || (dokumentSeite + 1) * 20 >= dokumentGesamt()">Weitere Dokumente</button></div> }
+      @if (vorschau(); as url) { <h3>{{ dokument()?.titel }}</h3><div class="aktionen"><button class="button secondary" (click)="herunterladen()" [disabled]="arbeitet()">PDF herunterladen</button><button class="button secondary" (click)="schliessen()">Ansicht schließen</button></div><p class="pdf-mobilhinweis">Für die vollständige Ansicht auf Ihrem Smartphone laden Sie die PDF herunter und öffnen sie in Ihrer PDF-App.</p><iframe title="Eigene Gehaltsabrechnung" [src]="url" referrerpolicy="no-referrer"></iframe> }
+    </section>
+  }
+}
+<section class="team-panel bereich"><h2>{{ pruefung ? 'Anträge zur Prüfung' : 'Meine Änderungsanträge' }}</h2>
+  @for (a of antraege(); track a.id) {
+    <article [id]="'antrag-' + a.id"><h3>{{ a.art === 'KONTAKT' ? 'Kontaktdaten' : 'Bankverbindung' }} · {{ a.name }} · #{{ a.id }}</h3><p><strong>{{ status(a) }}</strong> · Eingereicht am {{ a.erstellt | date:'dd.MM.yyyy HH:mm' }} von {{ a.antragsteller }}</p>
+      <div class="vergleich"><div><h4>Bisheriger Stand bei Einreichung</h4><dl>@for (w of werte(a.vorher); track w.name) { <dt>{{ w.name }}</dt><dd>{{ w.wert || '—' }}</dd> }</dl></div><div><h4>Beantragter Stand</h4><dl>@for (w of werte(a.nachher); track w.name) { <dt>{{ w.name }}</dt><dd>{{ w.wert || '—' }}</dd> }</dl></div></div>
+      @if (a.grund) { <p><strong>Begründung:</strong> {{ a.grund }}</p> }
+      @if (a.entschieden) { <p>Entschieden am {{ a.entschieden | date:'dd.MM.yyyy HH:mm' }} von {{ a.bearbeiter }}</p> }
+      @if (pruefung && a.status === 'BEANTRAGT' && a.entscheidbar) { <label class="field">Begründung für Antrag #{{ a.id }}<textarea [(ngModel)]="gruende[a.id]" maxlength="500" [disabled]="arbeitet()" rows="2"></textarea><small>Bei Ablehnung erforderlich.</small></label><div class="aktionen"><button class="button primary" (click)="entscheiden(a, 'GENEHMIGT')" [disabled]="arbeitet()">Genehmigen</button><button class="button secondary" (click)="entscheiden(a, 'ABGELEHNT')" [disabled]="arbeitet()">Ablehnen</button></div> }
+      @if (pruefung && a.status === 'BEANTRAGT' && !a.entscheidbar) { <p>Eigene Anträge müssen von einer anderen berechtigten Person geprüft werden.</p> }
+    </article>
+  } @empty { <p>{{ geladen() ? 'Keine Änderungsanträge vorhanden.' : 'Keine Anträge geladen.' }}</p> }
+  <div class="pagination"><span>{{ gesamt() }} Anträge · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Antragsseite" [disabled]="arbeitet() || seite === 0" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Antragsseite" [disabled]="arbeitet() || (seite + 1) * 20 >= gesamt()" (click)="seite = seite + 1; laden()">→</button></div></div>
+</section>
