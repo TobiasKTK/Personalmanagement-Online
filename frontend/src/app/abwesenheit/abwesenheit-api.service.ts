@@ -17,5 +17,8 @@ export class AbwesenheitApiService {
   abwesenheitLoeschen(person: number, a: Abwesenheit): Observable<void> {
     return mitFehlern(this.http.delete<void>(`/api/mitarbeiter/${person}/abwesenheiten/${a.id}`, { params: { version: a.version } }));
   }
+  abwesenheitTagLoeschen(person: number, a: Abwesenheit, tag: string): Observable<void> {
+    return mitFehlern(this.http.delete<void>(`/api/mitarbeiter/${person}/abwesenheiten/${a.id}/tage/${tag}`, { params: { version: a.version } }));
+  }
 
 }

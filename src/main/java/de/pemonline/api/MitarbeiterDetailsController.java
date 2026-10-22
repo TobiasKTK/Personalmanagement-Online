@@ -31,4 +31,10 @@ public class MitarbeiterDetailsController {
             @RequestParam(defaultValue = "0") @Min(0) int seite, @RequestParam(defaultValue = "20") @Min(1) @Max(100) int groesse) {
         return verlauf.liste(person, seite, groesse);
     }
+    @DeleteMapping("/abwesenheiten/{id}/tage/{tag}") @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void tagLoeschen(@PathVariable @Positive long person, @PathVariable @Positive long id,
+            @PathVariable @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate tag,
+            @RequestParam @PositiveOrZero long version) {
+        abwesenheiten.tagLoeschen(person, id, version, tag);
+    }
 }

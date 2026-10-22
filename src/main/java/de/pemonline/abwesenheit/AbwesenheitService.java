@@ -62,6 +62,31 @@ public class AbwesenheitService {
     }
     @Transactional
     @PreAuthorize("hasAnyRole('PERSONAL', 'ADMIN')")
+    public void tagLoeschen(@Positive long person, @Positive long id, @PositiveOrZero long version, @NotNull LocalDate tag) {
+        if (!mitarbeiter.sperren(person)) throw new FachlicherFehler(NICHT_GEFUNDEN, "Mitarbeiter nicht gefunden.");
+        var vorher = finden(person, id);
+        if (antraege.gebundeneAbwesenheit(id)) throw new FachlicherFehler(KONFLIKT, "Genehmigten Urlaub über den Antrag stornieren.");
+        if (vorher.version() != version) throw new FachlicherFehler(KONFLIKT, "Abwesenheit wurde inzwischen geändert.");
+        if (tag.isBefore(vorher.beginn()) || tag.isAfter(vorher.ende()))
+            throw new FachlicherFehler(UNGUELTIG, "Der Tag liegt außerhalb der Abwesenheit.");
+        if (vorher.beginn().equals(vorher.ende())) {
+            loeschen(person, id, version);
+            return;
+        }
+        // Die ursprüngliche ID bleibt am ersten Restblock; ein zweiter entsteht nur bei einer Teilung.
+        var beginn = tag.equals(vorher.beginn()) ? tag.plusDays(1) : vorher.beginn();
+        var ende = tag.equals(vorher.beginn()) ? vorher.ende() : tag.minusDays(1);
+        var rest = new AbwesenheitEingabe(vorher.art(), beginn, ende, version, vorher.halberTag());
+        if (!repository.aendern(person, id, rest)) throw new FachlicherFehler(KONFLIKT, "Abwesenheit wurde inzwischen geändert.");
+        verlauf.speichern(person, "ABWESENHEIT_GEAENDERT", vorher, finden(person, id));
+        if (tag.isAfter(vorher.beginn()) && tag.isBefore(vorher.ende())) {
+            long zweiterRest = repository.anlegen(person,
+                    new AbwesenheitEingabe(vorher.art(), tag.plusDays(1), vorher.ende(), null, vorher.halberTag()));
+            verlauf.speichern(person, "ABWESENHEIT_ANGELEGT", null, finden(person, zweiterRest));
+        }
+    }
+    @Transactional
+    @PreAuthorize("hasAnyRole('PERSONAL', 'ADMIN')")
     public void loeschen(@Positive long person, @Positive long id, @PositiveOrZero long version) {
         if (!mitarbeiter.sperren(person)) throw new FachlicherFehler(NICHT_GEFUNDEN, "Mitarbeiter nicht gefunden.");
         var vorher = finden(person, id);

@@ -15,17 +15,22 @@
   @if (laedt()) { <p role="status">Kalender wird geladen …</p> }
   <p class="legende"><span class="URLAUB">U · Urlaub / ½ · halber Tag</span><span class="KRANKHEIT">K · Krankheit</span><span class="ELTERNZEIT">E · Elternzeit</span><span class="SONSTIGES">S · Sonstiges</span></p>
   @if (darfSchreiben()) {
-    <p>Zum Löschen eine Abwesenheit anklicken. Dabei wird der gesamte Eintrag markiert, auch über Monatsgrenzen hinweg.</p>
+    <p>Zum Löschen einen belegten Tag anklicken. Anschließend den ausgewählten Tag oder den gesamten Abwesenheitsblock löschen.</p>
     @if (auswahl(); as markierung) {
       <section class="kalender-auswahl" aria-label="Markierte Abwesenheit">
         <p aria-live="polite"><strong>{{ markierung.person.name }} · {{ arten[markierung.abwesenheit.art] }}{{ markierung.abwesenheit.halberTag ? ' · ½ Tag' : '' }}</strong><br>
-          {{ markierung.abwesenheit.beginn | date:'dd.MM.yyyy' }} – {{ markierung.abwesenheit.ende | date:'dd.MM.yyyy' }} · Gesamter Eintrag markiert</p>
+          Ausgewählter Tag: {{ markierung.tag | date:'dd.MM.yyyy' }}<br>
+          Gesamter Block: {{ markierung.abwesenheit.beginn | date:'dd.MM.yyyy' }} – {{ markierung.abwesenheit.ende | date:'dd.MM.yyyy' }}</p>
         <div class="actions">
           <button type="button" class="button secondary" [disabled]="loescht()" (click)="auswahlAufheben()">Auswahl aufheben</button>
-          <button type="button" class="button danger" [disabled]="loescht() || laedt()" (click)="loeschen()">{{ loescht() ? 'Wird gelöscht …' : 'Abwesenheit löschen' }}</button>
+          <button type="button" class="button danger" [disabled]="loescht() || laedt()" (click)="loeschen('tag')">Tag löschen</button>
+          @if (markierung.abwesenheit.beginn !== markierung.abwesenheit.ende) {
+            <button type="button" class="button danger" [disabled]="loescht() || laedt()" (click)="loeschen('block')">Gesamten Block löschen</button>
+          }
         </div>
       </section>
     }
+    @if (loescht()) { <p role="status">Abwesenheit wird gelöscht …</p> }
   }
     <div #monatsuebersicht class="table-scroll" tabindex="0" aria-label="Monatsübersicht, horizontal scrollbar" [attr.aria-busy]="laedt() || loescht()">
       <table class="kalender"><caption>Abwesenheiten {{ daten()?.beginn?.slice(0, 7) }}</caption><thead><tr><th scope="col">
@@ -38,12 +43,12 @@
           <tr><th scope="row"><button class="personen-link" [disabled]="loescht()" (click)="oeffnen(p.id)">{{ p.name }}</button><small>{{ p.organisationseinheit || 'Ohne Zuordnung' }}{{ p.historieBekannt ? '' : ' · historischer Stand unbekannt' }}</small></th>
             @for (tag of tage(); track tag) {
               @let a = abwesenheit(p, tag);
-              <td [class]="a?.art || ''" [class.wochenende]="wochenende(tag)" [class.markiert]="a && markiert(p, a)"
+              <td [class]="a?.art || ''" [class.wochenende]="wochenende(tag)" [class.markiert]="a && markiert(p, a, tag)"
                 [attr.aria-label]="tag + ': ' + (a ? (a.halberTag ? 'Halber Urlaubstag' : arten[a.art]) : 'Keine Abwesenheit')"
                 [title]="a ? (a.halberTag ? 'Halber Urlaubstag' : arten[a.art]) : ''">
                 @if (a && darfSchreiben()) {
-                  <button type="button" class="abwesenheit-tag" [attr.aria-pressed]="markiert(p, a)" [disabled]="laedt() || loescht()"
-                    [attr.aria-label]="p.name + ': ' + (a.halberTag ? 'Halber Urlaubstag' : arten[a.art]) + ' am ' + datum(tag)" (click)="markieren(p, a)">{{ a.halberTag ? '½' : a.art.slice(0, 1) }}</button>
+                  <button type="button" class="abwesenheit-tag" [attr.aria-pressed]="markiert(p, a, tag)" [disabled]="laedt() || loescht()"
+                    [attr.aria-label]="p.name + ': ' + (a.halberTag ? 'Halber Urlaubstag' : arten[a.art]) + ' am ' + datum(tag)" (click)="markieren(p, a, tag)">{{ a.halberTag ? '½' : a.art.slice(0, 1) }}</button>
                 } @else { {{ a ? (a.halberTag ? '½' : a.art.slice(0, 1)) : '·' }} }
               </td>
             }

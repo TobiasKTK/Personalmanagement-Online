@@ -294,6 +294,24 @@ class PersonalplanungTest {
         antwortPruefen(admin.senden("GET", pfad + "&suche=" + "x".repeat(121), null), 400);
     }
     @Test
+    void einzelnerGeloeschterUrlaubstagGibtKontingentFrei() throws Exception {
+        long person = mitarbeiterAnlegen("Tagesloeschung");
+        urlaubskontoEinrichten(person, 2026, 3);
+        var a = urlaubBuchen(person, "2026-11-02", "2026-11-04", false);
+        assertThat(antwortPruefen(admin.senden("GET", urlaubskontoPfad(person, 2026), null), 200).get("verfuegbar").asDouble()).isZero();
+        var personal = kontoAnlegenUndAnmelden("tagpersonal", "PERSONAL");
+        String tage = "/api/mitarbeiter/" + person + "/abwesenheiten/" + a.get("id").asLong() + "/tage/2026-11-03?version=0";
+        var anfrage = personal.anfrage("DELETE", tage, null);
+        var erste = personal.client.sendAsync(anfrage, HttpResponse.BodyHandlers.ofString());
+        var zweite = personal.client.sendAsync(anfrage, HttpResponse.BodyHandlers.ofString());
+        CompletableFuture.allOf(erste, zweite).join();
+        assertThat(List.of(erste.join().statusCode(), zweite.join().statusCode())).containsExactlyInAnyOrder(204, 409);
+        var konto = antwortPruefen(admin.senden("GET", urlaubskontoPfad(person, 2026), null), 200);
+        assertThat(konto.get("geplant").asDouble()).isEqualTo(2);
+        assertThat(konto.get("verfuegbar").asDouble()).isEqualTo(1);
+        assertThat(antwortPruefen(admin.senden("GET", "/api/mitarbeiter/" + person + "/abwesenheiten", null), 200).get("gesamt").asInt()).isEqualTo(2);
+    }
+    @Test
     void kontoBerechnetArbeitstageFeiertageHalbeTageUndErsetztUebertrag() throws Exception {
         // Vorbereitung
         long mitarbeiterId = mitarbeiterAnlegen("Konto");
@@ -366,6 +384,7 @@ class PersonalplanungTest {
         assertThat(urlaubskonto.get("geplant").asDouble()).isEqualTo(0.5);
         long abwesenheitId = genehmigt.get("abwesenheitId").asLong();
         antwortPruefen(admin.senden("DELETE", "/api/mitarbeiter/" + mitarbeiterId + "/abwesenheiten/" + abwesenheitId + "?version=0", null), 409);
+        antwortPruefen(admin.senden("DELETE", "/api/mitarbeiter/" + mitarbeiterId + "/abwesenheiten/" + abwesenheitId + "/tage/2026-10-26?version=0", null), 409);
         gebucht.unveraendert(jdbc);
         // Ausführung und Überprüfung der anschließenden Stornierung
         antwortPruefen(entscheiden(mitarbeiterkonto, antragId, "STORNIEREN", 1), 200);

@@ -24,6 +24,7 @@ class ErweiterungenTest {
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("verwaltungJdbc") JdbcClient jdbc;
     @Autowired ObjectMapper json;
     @Autowired MitarbeiterService service;
+    @Autowired de.pemonline.abwesenheit.AbwesenheitService abwesenheiten;
     @Autowired PlatformTransactionManager transaktionen;
     TestHttp admin;
     @BeforeEach void vorbereiten() throws Exception {
@@ -118,6 +119,81 @@ class ErweiterungenTest {
         assertThat(verlauf.get("eintraege").get(0).get("bearbeiter").asString()).isEqualTo("testadmin");
         lesen(admin.senden("DELETE", "/api/mitarbeiter/" + id + "?version=0", null), 204);
         assertThat(lesen(admin.senden("GET", "/api/mitarbeiter/" + id + "/verlauf", null), 200).get("gesamt").asInt()).isEqualTo(5);
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "2026-12-30,2026-12-31,2027-01-04",
+        "2027-01-04,2026-12-30,2027-01-03"
+    })
+    void einzelnenRandtagEntfernenErhaeltDenRest(String tag, String beginn, String ende) throws Exception {
+        long person = anlegen(person("Randtag", "2020-01-01", null, null)).get("id").asLong();
+        String pfad = "/api/mitarbeiter/" + person + "/abwesenheiten";
+        var a = lesen(admin.senden("POST", pfad, "{\"art\":\"KRANKHEIT\",\"beginn\":\"2026-12-30\",\"ende\":\"2027-01-04\"}"), 201);
+        lesen(admin.senden("DELETE", pfad + "/" + a.get("id").asLong() + "/tage/" + tag + "?version=0", null), 204);
+        var rest = lesen(admin.senden("GET", pfad, null), 200);
+        assertThat(rest.get("gesamt").asInt()).isEqualTo(1);
+        var eintrag = rest.at("/eintraege/0");
+        assertThat(eintrag.get("id")).isEqualTo(a.get("id"));
+        assertThat(eintrag.get("art").asString()).isEqualTo("KRANKHEIT");
+        assertThat(eintrag.get("beginn").asString()).isEqualTo(beginn);
+        assertThat(eintrag.get("ende").asString()).isEqualTo(ende);
+        assertThat(eintrag.get("version").asInt()).isEqualTo(1);
+    }
+    @Test void mittlerenTagAtomarEntfernenTeiltDenBlockUndProtokolliertBeideReste() throws Exception {
+        long person = anlegen(person("Teilung", "2020-01-01", null, null)).get("id").asLong();
+        String pfad = "/api/mitarbeiter/" + person + "/abwesenheiten";
+        var a = lesen(admin.senden("POST", pfad, "{\"art\":\"URLAUB\",\"beginn\":\"2026-12-30\",\"ende\":\"2027-01-04\"}"), 201);
+        long id = a.get("id").asLong();
+        var bestand = TestDatenbestand.sichern(jdbc, "abwesenheit", "mitarbeiter_verlauf");
+        TestSicherheit.anmelden("ADMIN");
+        try {
+            new TransactionTemplate(transaktionen).executeWithoutResult(status -> {
+                abwesenheiten.tagLoeschen(person, id, 0, java.time.LocalDate.parse("2026-12-31"));
+                status.setRollbackOnly();
+            });
+        } finally { TestSicherheit.abmelden(); }
+        bestand.unveraendert(jdbc);
+        lesen(admin.senden("DELETE", pfad + "/" + id + "/tage/2026-12-31?version=0", null), 204);
+        var reste = lesen(admin.senden("GET", pfad, null), 200);
+        assertThat(reste.get("gesamt").asInt()).isEqualTo(2);
+        assertThat(reste.at("/eintraege/0/beginn").asString()).isEqualTo("2027-01-01");
+        assertThat(reste.at("/eintraege/0/ende").asString()).isEqualTo("2027-01-04");
+        assertThat(reste.at("/eintraege/1/beginn").asString()).isEqualTo("2026-12-30");
+        assertThat(reste.at("/eintraege/1/ende").asString()).isEqualTo("2026-12-30");
+        assertThat(reste.at("/eintraege/1/id").asLong()).isEqualTo(id);
+        for (var rest : reste.get("eintraege")) assertThat(rest.get("art").asString()).isEqualTo("URLAUB");
+        var verlauf = lesen(admin.senden("GET", "/api/mitarbeiter/" + person + "/verlauf", null), 200);
+        assertThat(verlauf.at("/eintraege/0/aktion").asString()).isEqualTo("ABWESENHEIT_ANGELEGT");
+        assertThat(verlauf.at("/eintraege/1/aktion").asString()).isEqualTo("ABWESENHEIT_GEAENDERT");
+        assertThat(json.readTree(verlauf.at("/eintraege/1/vorher").asString())).isEqualTo(a);
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void einzigenTagAuchBeiHalbemUrlaubVollstaendigEntfernen(boolean halberTag) throws Exception {
+        long person = anlegen(person("Einzeltag", "2020-01-01", null, null)).get("id").asLong();
+        String pfad = "/api/mitarbeiter/" + person + "/abwesenheiten";
+        var eingabe = json.createObjectNode().put("art", "URLAUB").put("beginn", "2026-12-30").put("ende", "2026-12-30").put("halberTag", halberTag);
+        var a = lesen(admin.senden("POST", pfad, eingabe.toString()), 201);
+        lesen(admin.senden("DELETE", pfad + "/" + a.get("id").asLong() + "/tage/2026-12-30?version=0", null), 204);
+        assertThat(lesen(admin.senden("GET", pfad, null), 200).get("gesamt").asInt()).isZero();
+    }
+    @Test void tagLoeschenPrueftVersionDatumPersonUndRechteOhneNebenwirkungen() throws Exception {
+        long person = anlegen(person("Schutz", "2020-01-01", null, null)).get("id").asLong();
+        String pfad = "/api/mitarbeiter/" + person + "/abwesenheiten";
+        var a = lesen(admin.senden("POST", pfad, "{\"art\":\"SONSTIGES\",\"beginn\":\"2026-12-30\",\"ende\":\"2027-01-04\"}"), 201);
+        String tage = pfad + "/" + a.get("id").asLong() + "/tage/";
+        konto("tagleser", "LESEN");
+        var leser = login("tagleser");
+        long anderePerson = anlegen(person("Andere", "2020-01-01", null, null)).get("id").asLong();
+        var bestand = TestDatenbestand.sichern(jdbc, "abwesenheit", "mitarbeiter_verlauf");
+        lesen(admin.senden("DELETE", tage + "2026-12-31?version=1", null), 409);
+        for (String tag : List.of("2026-12-29", "2027-01-05", "2026-02-30", "ungueltig"))
+            lesen(admin.senden("DELETE", tage + tag + "?version=0", null), 400);
+        lesen(admin.senden("DELETE", tage + "2026-12-31", null), 400);
+        lesen(admin.senden("DELETE", tage + "2026-12-31?version=-1", null), 400);
+        lesen(leser.senden("DELETE", tage + "2026-12-31?version=0", null), 403);
+        lesen(admin.senden("DELETE", "/api/mitarbeiter/" + anderePerson + "/abwesenheiten/" + a.get("id").asLong() + "/tage/2026-12-31?version=0", null), 404);
+        bestand.unveraendert(jdbc);
     }
     @Test void paralleleAbwesenheitenUndRollback() throws Exception {
         long id = anlegen(person("Parallel", "2020-01-01", null, null)).get("id").asLong();

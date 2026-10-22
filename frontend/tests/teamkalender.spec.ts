@@ -76,7 +76,7 @@ test('Markierter Urlaub wird vollständig und erst nach Bestätigung gelöscht',
   await tag.focus();
   await page.keyboard.press('Space');
   await expect(tag).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('button', { name: 'Anna Kalendertest: Urlaub am 31.12.2026', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Anna Kalendertest: Urlaub am 31.12.2026', exact: true })).toHaveAttribute('aria-pressed', 'false');
   const krankheit = page.getByRole('button', { name: 'Anna Kalendertest: Krankheit am 10.12.2026', exact: true });
   await expect(krankheit).toHaveAttribute('aria-pressed', 'false');
   await krankheit.click();
@@ -90,19 +90,20 @@ test('Markierter Urlaub wird vollständig und erst nach Bestätigung gelöscht',
   for (const breite of [320, 768, 1024]) {
     await page.setViewportSize({ width: breite, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await expect(auswahl.getByRole('button', { name: 'Abwesenheit löschen', exact: true })).toBeVisible();
+    await expect(auswahl.getByRole('button', { name: 'Gesamten Block löschen', exact: true })).toBeVisible();
+    await expect(auswahl.getByRole('button', { name: 'Tag löschen', exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`kalender-markierung-${breite}.png`), fullPage: true });
   }
   page.once('dialog', async dialog => {
     expect(dialog.message()).toContain('30.12.2026 – 04.01.2027');
     await dialog.dismiss();
   });
-  await auswahl.getByRole('button', { name: 'Abwesenheit löschen', exact: true }).click();
+  await auswahl.getByRole('button', { name: 'Gesamten Block löschen', exact: true }).click();
   await expect(auswahl).toBeVisible();
   expect((await (await request.get(`/api/mitarbeiter/${person.id}/abwesenheiten`)).json()).gesamt).toBe(2);
   page.once('dialog', dialog => dialog.accept());
   const geloescht = page.waitForResponse(r => r.request().method() === 'DELETE' && r.url().includes(`/abwesenheiten/${urlaub.id}?version=${urlaub.version}`));
-  await auswahl.getByRole('button', { name: 'Abwesenheit löschen', exact: true }).click();
+  await auswahl.getByRole('button', { name: 'Gesamten Block löschen', exact: true }).click();
   expect((await geloescht).status()).toBe(204);
   await expect(auswahl).toHaveCount(0);
   await expect(page.getByRole('status')).toContainText('Abwesenheit gelöscht.');
@@ -114,6 +115,55 @@ test('Markierter Urlaub wird vollständig und erst nach Bestätigung gelöscht',
   await expect(page.locator('.kalender caption')).toHaveText('Abwesenheiten 2027-01');
   await expect(page.locator('.kalender tbody .URLAUB')).toHaveCount(0);
   expect(fehler).toEqual([]);
+});
+
+test('Einzelnen Tag im Block auswählen und löschen erhält alle übrigen Tage auch im Folgemonat', async ({ page, request }, testInfo) => {
+  const person = await personAnlegen(request);
+  await abwesenheitAnlegen(request, person.id);
+  await monatAnzeigen(page);
+  const ersterTag = page.getByRole('button', { name: 'Anna Kalendertest: Urlaub am 30.12.2026', exact: true });
+  const tag = page.getByRole('button', { name: 'Anna Kalendertest: Urlaub am 31.12.2026', exact: true });
+  await ersterTag.click();
+  await tag.focus();
+  await page.keyboard.press('Enter');
+  await expect(ersterTag).toHaveAttribute('aria-pressed', 'false');
+  await expect(tag).toHaveAttribute('aria-pressed', 'true');
+  const auswahl = page.getByRole('region', { name: 'Markierte Abwesenheit' });
+  await expect(auswahl).toContainText('Ausgewählter Tag: 31.12.2026');
+  page.once('dialog', async dialog => {
+    expect(dialog.message()).toContain('nur am 31.12.2026');
+    await dialog.dismiss();
+  });
+  await auswahl.getByRole('button', { name: 'Tag löschen', exact: true }).click();
+  await expect(tag).toBeVisible();
+  expect((await (await request.get(`/api/mitarbeiter/${person.id}/abwesenheiten`)).json()).gesamt).toBe(1);
+  page.once('dialog', dialog => dialog.accept());
+  await auswahl.getByRole('button', { name: 'Tag löschen', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Abwesenheit am 31.12.2026 gelöscht.');
+  await expect(tag).toHaveCount(0);
+  await expect(ersterTag).toBeVisible();
+  await expect(page.getByLabel('Monatsübersicht, horizontal scrollbar', { exact: true })).toBeFocused();
+  const rest = await (await request.get(`/api/mitarbeiter/${person.id}/abwesenheiten`)).json();
+  expect(rest.eintraege).toEqual([
+    expect.objectContaining({ art: 'URLAUB', beginn: '2027-01-01', ende: '2027-01-04' }),
+    expect.objectContaining({ art: 'URLAUB', beginn: '2026-12-30', ende: '2026-12-30' }),
+  ]);
+  await page.screenshot({ path: testInfo.outputPath('kalender-einzeltag-geloescht.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Nächster Monat', exact: true }).click();
+  await expect(page.locator('.kalender caption')).toHaveText('Abwesenheiten 2027-01');
+  await expect(page.locator('.kalender tbody .URLAUB')).toHaveCount(4);
+});
+
+test('Einzelner halber Urlaubstag lässt sich über Tag löschen entfernen', async ({ page, request }) => {
+  const person = await personAnlegen(request);
+  await abwesenheitAnlegen(request, person.id, 'URLAUB', '2026-12-15', '2026-12-15', true);
+  await monatAnzeigen(page);
+  const tag = page.getByRole('button', { name: 'Anna Kalendertest: Halber Urlaubstag am 15.12.2026', exact: true });
+  await tag.click();
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Tag löschen', exact: true }).click();
+  await expect(tag).toHaveCount(0);
+  expect((await (await request.get(`/api/mitarbeiter/${person.id}/abwesenheiten`)).json()).gesamt).toBe(0);
 });
 
 test('Auswahl lässt sich aufheben und wird bei Suche oder Monatswechsel verworfen', async ({ page, request }) => {
@@ -167,7 +217,7 @@ test('Nach erfolgreichem Löschen und fehlgeschlagener Aktualisierung sind Wiede
     status: 503, json: { meldung: 'Kalender vorübergehend nicht erreichbar.' },
   }), { times: 1 });
   page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Abwesenheit löschen', exact: true }).click();
+  await page.getByRole('button', { name: 'Gesamten Block löschen', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('Kalender vorübergehend nicht erreichbar.');
   await expect(page.getByRole('status')).toHaveText('Abwesenheit gelöscht.');
   await expect(page.getByRole('region', { name: 'Markierte Abwesenheit' })).toHaveCount(0);
@@ -181,20 +231,22 @@ test('Nach erfolgreichem Löschen und fehlgeschlagener Aktualisierung sind Wiede
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
-test('Versionskonflikt beim Löschen erhält die Abwesenheit und zeigt den Serverhinweis', async ({ page, request }) => {
+for (const aktion of ['Tag löschen', 'Gesamten Block löschen']) {
+test(`Versionskonflikt bei ${aktion} erhält die Abwesenheit und zeigt den Serverhinweis`, async ({ page, request }) => {
   const person = await personAnlegen(request);
   const urlaub = await abwesenheitAnlegen(request, person.id);
   await monatAnzeigen(page);
   await page.getByRole('button', { name: 'Anna Kalendertest: Urlaub am 30.12.2026', exact: true }).click();
   expect((await request.put(`/api/mitarbeiter/${person.id}/abwesenheiten/${urlaub.id}`, { data: { ...urlaub, ende: '2027-01-05' } })).status()).toBe(200);
   page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Abwesenheit löschen', exact: true }).click();
+  await page.getByRole('button', { name: aktion, exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Abwesenheit wurde inzwischen geändert.');
   await expect(page.getByRole('region', { name: 'Markierte Abwesenheit' })).toBeVisible();
   expect((await (await request.get(`/api/mitarbeiter/${person.id}/abwesenheiten`)).json()).gesamt).toBe(1);
   await page.getByRole('button', { name: 'Kalender anzeigen', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Markierte Abwesenheit' })).toHaveCount(0);
 });
+}
 
 test('Lesekonten sehen den Kalender ohne Auswahl- und Löschaktionen', async ({ page, request }) => {
   const person = await personAnlegen(request);
@@ -209,7 +261,8 @@ test('Lesekonten sehen den Kalender ohne Auswahl- und Löschaktionen', async ({ 
   await monatAnzeigen(page);
   await expect(page.locator('.kalender tbody td.URLAUB')).toHaveCount(2);
   await expect(page.locator('.kalender tbody td button')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Abwesenheit löschen', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Gesamten Block löschen', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Tag löschen', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Nächster Monat', exact: true }).click();
   await expect(page.locator('.kalender caption')).toHaveText('Abwesenheiten 2027-01');
 });

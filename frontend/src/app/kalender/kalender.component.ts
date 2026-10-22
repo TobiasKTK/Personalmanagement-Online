@@ -27,7 +27,7 @@ export class KalenderComponent implements OnInit {
   readonly laedt = signal(false);
   readonly loescht = signal(false);
   readonly meldung = signal('');
-  readonly auswahl = signal<{ person: KalenderPerson; abwesenheit: Abwesenheit } | null>(null);
+  readonly auswahl = signal<{ person: KalenderPerson; abwesenheit: Abwesenheit; tag: string } | null>(null);
   @ViewChild('monatsuebersicht') private monatsuebersicht?: ElementRef<HTMLElement>;
   monat = heutigesDatum().slice(0, 7);
   organisation = '';
@@ -82,10 +82,10 @@ export class KalenderComponent implements OnInit {
   tage(): string[] { const d = this.daten(); return d ? Array.from({ length: +d.ende.slice(8) }, (_, i) => d.beginn.slice(0, 8) + String(i + 1).padStart(2, '0')) : []; }
   wochenende(tag: string): boolean { return [0, 6].includes(new Date(tag + 'T12:00:00Z').getUTCDay()); }
   abwesenheit(p: KalenderPerson, tag: string): Abwesenheit | undefined { return p.abwesenheiten.find(a => a.beginn <= tag && a.ende >= tag); }
-  markiert(p: KalenderPerson, a: Abwesenheit): boolean { return this.auswahl()?.person.id === p.id && this.auswahl()?.abwesenheit.id === a.id; }
-  markieren(p: KalenderPerson, a: Abwesenheit): void {
+  markiert(p: KalenderPerson, a: Abwesenheit, tag: string): boolean { return this.auswahl()?.person.id === p.id && this.auswahl()?.abwesenheit.id === a.id && this.auswahl()?.tag === tag; }
+  markieren(p: KalenderPerson, a: Abwesenheit, tag: string): void {
     if (!this.darfSchreiben() || this.laedt() || this.loescht()) return;
-    this.auswahl.set(this.markiert(p, a) ? null : { person: p, abwesenheit: a });
+    this.auswahl.set(this.markiert(p, a, tag) ? null : { person: p, abwesenheit: a, tag });
     this.fehler.set(''); this.meldung.set('');
   }
   auswahlAufheben(): void {
@@ -94,15 +94,20 @@ export class KalenderComponent implements OnInit {
     this.monatsuebersicht?.nativeElement.focus();
   }
   datum(datum: string): string { return `${datum.slice(8)}.${datum.slice(5, 7)}.${datum.slice(0, 4)}`; }
-  async loeschen(): Promise<void> {
+  async loeschen(umfang: 'tag' | 'block'): Promise<void> {
     const auswahl = this.auswahl();
     if (!auswahl || !this.darfSchreiben() || this.laedt() || this.loescht()) return;
     const a = auswahl.abwesenheit;
-    if (!confirm(`${this.arten[a.art]} von ${auswahl.person.name} (${this.datum(a.beginn)} – ${this.datum(a.ende)}) für den gesamten Zeitraum endgültig löschen?`)) return;
+    const zeitraum = umfang === 'tag'
+      ? `nur am ${this.datum(auswahl.tag)}`
+      : `(${this.datum(a.beginn)} – ${this.datum(a.ende)}) für den gesamten Zeitraum`;
+    if (!confirm(`${this.arten[a.art]} von ${auswahl.person.name} ${zeitraum} endgültig löschen?`)) return;
     this.loescht.set(true); this.fehler.set(''); this.meldung.set('');
     try {
-      await firstValueFrom(this.abwesenheitApi.abwesenheitLoeschen(auswahl.person.id, a));
-      this.meldung.set('Abwesenheit gelöscht.');
+      await firstValueFrom(umfang === 'tag'
+        ? this.abwesenheitApi.abwesenheitTagLoeschen(auswahl.person.id, a, auswahl.tag)
+        : this.abwesenheitApi.abwesenheitLoeschen(auswahl.person.id, a));
+      this.meldung.set(umfang === 'tag' ? `Abwesenheit am ${this.datum(auswahl.tag)} gelöscht.` : 'Abwesenheit gelöscht.');
       await this.laden();
       this.monatsuebersicht?.nativeElement.focus();
     } catch (e) { this.fehler.set(this.text(e)); }
