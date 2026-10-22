@@ -11,7 +11,7 @@ Der sichtbare Produktname lautet **Personalmanagement Online**. Der Projektordne
 Voraussetzungen: **JDK 25 oder neuer**, Git, PowerShell sowie **Docker mit Compose** für die Keycloak-Anmeldung. Docker Desktop vor dem Start öffnen. Maven, Node.js und die Frontend-Abhängigkeiten werden beim ersten Build automatisch heruntergeladen; dafür ist Internetzugriff erforderlich.
 
 ```powershell
-git clone https://github.com/TobiasKTK/pemonline.git
+git clone https://github.com/TobiasKTK/Personalmanagement-Online.git pemonline
 cd pemonline
 .\Keycloak.ps1
 .\Starten.ps1
