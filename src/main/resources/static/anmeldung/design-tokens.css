@@ -1,0 +1,33 @@
+/* Gemeinsame Gestaltung für Anmeldung und Angular-Anwendung. */
+:root {
+  --font-sans: "Segoe UI", Arial, sans-serif;
+  --text: #172b4d;
+  --muted: #52647a;
+  --canvas: #f4f6fa;
+  --surface: #ffffff;
+  --surface-subtle: #f8fafc;
+  --line: #dce3ed;
+  --control-border: #8191a7;
+  --primary: #175cd3;
+  --primary-hover: #124aa8;
+  --primary-soft: #edf4ff;
+  --focus: #175cd3;
+  --success: #21633d;
+  --success-soft: #edf7f0;
+  --warning: #80520d;
+  --warning-soft: #fff5e3;
+  --danger: #b42318;
+  --danger-hover: #912018;
+  --danger-soft: #fff1f0;
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --radius-sm: .375rem;
+  --radius: .5rem;
+  --radius-lg: .75rem;
+  --shadow-dialog: 0 24px 64px rgb(23 43 77 / 20%);
+}

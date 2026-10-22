@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+    <groupId>de.pemonline</groupId>
+    <artifactId>pemonline</artifactId>
+    <version>1.0.0</version>
+    <name>Personalmanagement Online</name>
+    <description>Personalmanagement Online mit HTTP-API und dauerhafter Datenbank</description>
+    <properties>
+        <java.version>25</java.version>
+        <pem.frontend.resources>${project.basedir}/target/frontend/browser</pem.frontend.resources>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${pem.frontend.resources}</directory>
+                <targetPath>static</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>2.0.2</version>
+                <!-- VS Code/m2e soll keine parallelen npm-Laeufe bei Java-Autobuilds
+                     starten. Maven und die preLaunchTask bauen Angular weiterhin mit. -->
+                <?m2e ignore?>
+                <configuration>
+                    <workingDirectory>frontend</workingDirectory>
+                    <installDirectory>${project.basedir}/.tools</installDirectory>
+                    <nodeVersion>v24.21.0</nodeVersion>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>node-und-npm</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>install-node-and-npm</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>frontend-abhaengigkeiten</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>npm</goal></goals>
+                        <configuration><arguments>run vorbereiten</arguments></configuration>
+                    </execution>
+                    <execution>
+                        <id>angular-bauen</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>npm</goal></goals>
+                        <configuration><arguments>run build</arguments></configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>keycloak-pruefung</id>
+            <build>
+                <directory>${project.basedir}/target/keycloak-pruefung</directory>
+            </build>
+        </profile>
+        <profile>
+            <id>konto-pruefung</id>
+            <build>
+                <directory>${project.basedir}/target/konto-pruefung</directory>
+            </build>
+        </profile>
+        <!-- Der Terminalstart darf die vom Java-Sprachserver erzeugten Klassen nicht verwenden. -->
+        <profile>
+            <id>start</id>
+            <build>
+                <directory>${project.basedir}/target/start</directory>
+            </build>
+        </profile>
+    </profiles>
+</project>

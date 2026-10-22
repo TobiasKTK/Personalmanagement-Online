@@ -1,0 +1,16 @@
+:host { display: block; min-width: 0; }
+fieldset { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; margin: 16px 0; min-width: 0; }
+legend { font-weight: 600; padding: 0 8px; }
+section > section { margin-top: 28px; }
+textarea { font: inherit; border: 1px solid var(--control-border); border-radius: var(--radius); padding: 10px; resize: vertical; width: 100%; min-width: 0; }
+.anforderung { display: flex; align-items: end; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.anforderung .field { flex: 1; min-width: 160px; }
+.actions { flex-wrap: wrap; margin-top: 12px; }
+.mehrzeilig { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tabelle { overflow: auto; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--line); }
+.bedarf { background: var(--warning-soft); }
+.management-list li { gap: 16px; flex-wrap: wrap; overflow-wrap: anywhere; }
+.management-list li > div { min-width: 0; }
+@media (max-width: 600px) { fieldset { padding: 12px; } .anforderung { display: block; } }

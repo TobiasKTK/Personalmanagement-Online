@@ -1,0 +1,305 @@
+<dialog
+  #editor
+  id="editor"
+  (cancel)="schliessen($event)"
+  aria-labelledby="dialog-titel"
+>
+  <form
+    #formularElement
+    id="formular"
+    [formGroup]="formular"
+    (ngSubmit)="speichern()"
+    ngNativeValidate
+  >
+    <div class="dialog-heading">
+      <div>
+        <p class="eyebrow">IHR TEAM</p>
+        <h2 id="dialog-titel">
+          {{ person() ? "Mitarbeiter bearbeiten" : "Mitarbeiter hinzufügen" }}
+        </h2>
+      </div>
+      <button
+        class="icon-button"
+        id="schliessen"
+        (click)="schliessen()"
+        [disabled]="speichert()"
+        type="button"
+        aria-label="Dialog schließen"
+      >
+        ×
+      </button>
+    </div>
+    <p class="dialog-description">
+      Mit * gekennzeichnete Felder sind erforderlich. Die Personalnummer wird
+      automatisch vorgeschlagen und kann nur bei der Neuanlage geändert werden.
+    </p>
+    @if (fehler()) {
+      <div id="formular-fehler" class="banner error" role="alert">
+        {{ fehler() }}
+      </div>
+    }
+    @if (person() && !person()?.vorname) {
+      <div class="banner info" role="status">
+        Der bisherige vollständige Name steht im Feld Nachname. Bitte teilen Sie
+        ihn in Vorname und Nachname auf.
+      </div>
+    }
+    <fieldset class="form-section">
+      <legend>Persönliche Angaben</legend>
+      <div class="form-grid stammdaten-grid">
+        <label class="field" for="personalnummer"
+          >Personal-Nr.<input
+            id="personalnummer"
+            [readOnly]="!!person()"
+            formControlName="personalnummer"
+            [attr.aria-invalid]="feldFehler('personalnummer') ? true : null"
+            type="number"
+            min="1"
+            max="2147483647"
+            step="1"
+            placeholder="Automatisch"
+            aria-describedby="personalnummer-fehler personalnummer-hilfe"
+          /><span class="field-help" id="personalnummer-hilfe">{{
+            nummerHinweis()
+          }}</span
+          ><span class="field-error" id="personalnummer-fehler">{{
+            feldFehler("personalnummer")
+          }}</span></label
+        >
+        <label class="field" for="titel"
+          >Titel<input
+            id="titel"
+            formControlName="titel"
+            [attr.aria-invalid]="feldFehler('titel') ? true : null"
+            maxlength="80"
+            placeholder="z. B. Dipl.-Kfm."
+            aria-describedby="titel-fehler"
+          /><span class="field-error" id="titel-fehler">{{
+            feldFehler("titel")
+          }}</span></label
+        >
+        <label class="field" for="nachname"
+          >Nachname *<input
+            id="nachname"
+            formControlName="nachname"
+            [attr.aria-invalid]="feldFehler('nachname') ? true : null"
+            maxlength="120"
+            autocomplete="family-name"
+            placeholder="z. B. Müller"
+            required
+            aria-describedby="nachname-fehler"
+          /><span class="field-error" id="nachname-fehler">{{
+            feldFehler("nachname")
+          }}</span></label
+        >
+        <label class="field" for="vorname"
+          >Vorname *<input
+            id="vorname"
+            formControlName="vorname"
+            [attr.aria-invalid]="feldFehler('vorname') ? true : null"
+            maxlength="120"
+            autocomplete="given-name"
+            placeholder="z. B. Max"
+            required
+            aria-describedby="vorname-fehler"
+          /><span class="field-error" id="vorname-fehler">{{
+            feldFehler("vorname")
+          }}</span></label
+        >
+        <label class="field" for="geburtsname"
+          >Geburtsname<input
+            id="geburtsname"
+            formControlName="geburtsname"
+            [attr.aria-invalid]="feldFehler('geburtsname') ? true : null"
+            maxlength="120"
+            aria-describedby="geburtsname-fehler"
+          /><span class="field-error" id="geburtsname-fehler">{{
+            feldFehler("geburtsname")
+          }}</span></label
+        >
+        <label class="field" for="kuerzel"
+          >Kürzel<input
+            id="kuerzel"
+            formControlName="kuerzel"
+            [attr.aria-invalid]="feldFehler('kuerzel') ? true : null"
+            maxlength="20"
+            placeholder="z. B. MM"
+            aria-describedby="kuerzel-fehler"
+          /><span class="field-error" id="kuerzel-fehler">{{
+            feldFehler("kuerzel")
+          }}</span></label
+        >
+        <label class="field" for="geburtsdatum"
+          >Geburtsdatum<input
+            id="geburtsdatum"
+            formControlName="geburtsdatum"
+            [attr.aria-invalid]="feldFehler('geburtsdatum') ? true : null"
+            type="date"
+            min="0001-01-01"
+            max="9999-12-31"
+            aria-describedby="geburtsdatum-fehler"
+          /><span class="field-error" id="geburtsdatum-fehler">{{
+            feldFehler("geburtsdatum")
+          }}</span></label
+        >
+      </div>
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Beschäftigung</legend>
+      <div class="form-grid stammdaten-grid">
+        <label class="field" for="eintrittsdatum"
+          >Eintrittsdatum *<input
+            id="eintrittsdatum"
+            formControlName="eintrittsdatum"
+            [attr.aria-invalid]="feldFehler('eintrittsdatum') ? true : null"
+            type="date"
+            min="0001-01-01"
+            max="9999-12-31"
+            required
+            aria-describedby="eintrittsdatum-fehler"
+          /><span class="field-error" id="eintrittsdatum-fehler">{{
+            feldFehler("eintrittsdatum")
+          }}</span></label
+        >
+        <label class="field" for="austrittsdatum"
+          >Austrittsdatum<input
+            id="austrittsdatum"
+            formControlName="austrittsdatum"
+            [attr.aria-invalid]="feldFehler('austrittsdatum') ? true : null"
+            type="date"
+            min="0001-01-01"
+            max="9999-12-31"
+            aria-describedby="austrittsdatum-fehler"
+          /><span class="field-error" id="austrittsdatum-fehler">{{
+            feldFehler("austrittsdatum")
+          }}</span></label
+        >
+        <label class="field" for="wochenstunden"
+          >Wochenstunden *<input
+            id="wochenstunden"
+            formControlName="wochenstunden"
+            [attr.aria-invalid]="feldFehler('wochenstunden') ? true : null"
+            type="number"
+            min="0.5"
+            max="168"
+            step="0.01"
+            placeholder="z. B. 40"
+            required
+            aria-describedby="wochenstunden-fehler"
+          /><span class="field-error" id="wochenstunden-fehler">{{
+            feldFehler("wochenstunden")
+          }}</span></label
+        >
+      </div>
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Organisation und Status</legend>
+      <div class="form-grid stammdaten-grid">
+        <label class="field" for="organisationseinheit">Org.-Einheit
+          <select id="organisationseinheit" formControlName="organisationseinheitId" aria-describedby="organisationseinheit-fehler">
+            <option [ngValue]="null">Keine Zuordnung</option>
+            @for (o of organisationen(); track o.id) { <option [ngValue]="o.id">{{ o.name }}</option> }
+          </select>
+          <span class="field-error" id="organisationseinheit-fehler">{{ feldFehler('organisationseinheitId') }}</span>
+        </label>
+        <label class="field" for="stelle"
+          >Stelle<input
+            id="stelle"
+            formControlName="stelle"
+            [attr.aria-invalid]="feldFehler('stelle') ? true : null"
+            maxlength="120"
+            placeholder="z. B. Geschäftsführer"
+            aria-describedby="stelle-fehler"
+          /><span class="field-error" id="stelle-fehler">{{
+            feldFehler("stelle")
+          }}</span></label
+        >
+        <label class="field" for="beschaeftigungsart"
+          >Beschäftigungsart
+          <select
+            id="beschaeftigungsart"
+            formControlName="beschaeftigungsart"
+            [attr.aria-invalid]="
+              feldFehler('beschaeftigungsart') ? true : null
+            "
+            aria-describedby="beschaeftigungsart-fehler"
+          >
+            <option value="">Keine Angabe</option>
+            @for (status of beschaeftigungsart(); track status) {
+              <option [value]="status">{{ status }}</option>
+            }
+          </select>
+          <span class="field-error" id="beschaeftigungsart-fehler">{{
+            feldFehler("beschaeftigungsart")
+          }}</span>
+        </label>
+        <p class="field-help">Beschäftigung und Abwesenheit werden aus Eintritt, Austritt und den Abwesenheitszeiträumen berechnet.</p>
+        @if (person()?.altBeschaeftigungsstatus || person()?.altAbwesenheitsstatus) {
+          <p class="field-help">Unveränderte Altangaben (ohne zeitliche Zuordnung):
+            {{ person()?.altBeschaeftigungsstatus || '—' }} · {{ person()?.altAbwesenheitsstatus || '—' }}.
+            Bitte bei Bedarf die Beschäftigungsart korrigieren oder einen Abwesenheitszeitraum erfassen.</p>
+        }
+      </div>
+    </fieldset>
+    <div class="dialog-footer">
+      <button
+        type="button"
+        class="button secondary"
+        id="abbrechen"
+        (click)="schliessen()"
+        [disabled]="speichert()"
+      >
+        Abbrechen</button
+      ><button
+        type="submit"
+        class="button primary"
+        id="speichern"
+        [disabled]="speichert()"
+      >
+        {{ speichert() ? "Wird gespeichert …" : "Mitarbeiter speichern" }}
+      </button>
+    </div>
+  </form>
+</dialog>
+<dialog
+  #bestaetigung
+  id="ungespeichert-dialog"
+  aria-labelledby="ungespeichert-titel"
+  aria-describedby="ungespeichert-text"
+  (cancel)="weiterBearbeiten($event)"
+>
+  <div class="dialog-heading">
+    <h2 id="ungespeichert-titel">Änderungen speichern?</h2>
+  </div>
+  <p class="dialog-description" id="ungespeichert-text">
+    Sie haben ungespeicherte Änderungen. Möchten Sie diese vor dem Schließen
+    speichern?
+  </p>
+  <div class="dialog-footer">
+    <button
+      type="button"
+      class="button secondary"
+      id="ungespeichert-weiter"
+      (click)="weiterBearbeiten()"
+      autofocus
+    >
+      Weiter bearbeiten
+    </button>
+    <button
+      type="button"
+      class="button danger"
+      id="ungespeichert-verwerfen"
+      (click)="verwerfen()"
+    >
+      Verwerfen
+    </button>
+    <button
+      type="button"
+      class="button primary"
+      id="ungespeichert-speichern"
+      (click)="vorSchliessenSpeichern()"
+    >
+      Speichern
+    </button>
+  </div>
+</dialog>

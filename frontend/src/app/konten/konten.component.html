@@ -1,0 +1,36 @@
+<section class="team-panel administration" aria-label="Administration">
+  <h1>Konten</h1>
+  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  <h2>{{ session.sitzung()?.keycloak ? 'Firmenzugänge' : 'Lokale Konten' }}</h2>
+  <p>Rolle und Aktivierung gelten für die aktuell ausgewählte Firma. Kontonamen sind über alle Firmen eindeutig; weitere Firmenzugänge ordnet die Systemverwaltung unter „Firmen verwalten“ zu.</p>
+  @if (session.sitzung()?.keycloak) {
+    <p>Die Keycloak-Administration verknüpft das zentrale Benutzerkonto mit dem hier vergebenen Kontonamen. Passwörter und E-Mail-Adressen werden in Keycloak verwaltet.</p>
+  }
+  <p>Lesen: Mitarbeiter und Abwesenheiten ansehen. Personalverwaltung: zusätzlich Mitarbeiter und Abwesenheiten bearbeiten sowie Verlauf lesen. Administration: zusätzlich Organisationseinheiten und Konten verwalten.</p>
+  <form #kontoFormular="ngForm" (ngSubmit)="kontoSpeichern(kontoFormular)" class="filter-grid konto-formular">
+    <div class="field">
+      <label for="kontoname">Kontoname</label>
+      <input id="kontoname" name="name" #kontoname="ngModel" [(ngModel)]="konto.name" required pattern="[a-z0-9._-]{3,80}" maxlength="80" [readOnly]="!kontoNeu" [disabled]="arbeitet()" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="kontoname-hilfe kontoname-fehler" [attr.aria-invalid]="kontoFeldFehler(kontoname) ? true : null">
+      <span class="field-help" id="kontoname-hilfe" [hidden]="!!kontoFeldFehler(kontoname)">{{ kontonameHinweis }}</span>
+      <span class="field-error" id="kontoname-fehler" aria-live="polite">{{ kontoFeldFehler(kontoname) }}</span>
+    </div>
+    @if (!session.sitzung()?.keycloak) {
+    <div class="field">
+      <label for="kontopasswort">{{ kontoNeu ? 'Passwort' : 'Neues Passwort (leer: beibehalten)' }}</label>
+      <input id="kontopasswort" name="passwort" #kontopasswort="ngModel" type="password" [(ngModel)]="konto.passwort" [required]="kontoNeu" minlength="12" maxlength="128" autocomplete="new-password" [disabled]="arbeitet()" aria-describedby="kontopasswort-hilfe kontopasswort-fehler" [attr.aria-invalid]="kontoFeldFehler(kontopasswort) ? true : null">
+      <span class="field-help" id="kontopasswort-hilfe" [hidden]="!!kontoFeldFehler(kontopasswort)">{{ passwortHinweis }}</span>
+      <span class="field-error" id="kontopasswort-fehler" aria-live="polite">{{ kontoFeldFehler(kontopasswort) }}</span>
+    </div>
+    }
+    <label class="field">Rolle<select name="rolle" [(ngModel)]="konto.rolle" [disabled]="arbeitet()"><option value="LESEN">Lesen</option><option value="PERSONAL">Personalverwaltung</option><option value="ADMIN">Administration</option></select></label>
+    <label><input type="checkbox" name="aktiv" [(ngModel)]="konto.aktiv" [disabled]="arbeitet()"> Konto aktiv</label>
+    <button class="button primary" [disabled]="arbeitet()">{{ kontoNeu ? 'Konto anlegen' : 'Konto speichern' }}</button>
+    @if (!kontoNeu) { <button type="button" class="button secondary" (click)="kontoBearbeiten(undefined, kontoFormular)" [disabled]="arbeitet()">Abbrechen</button> }
+  </form>
+  <ul class="management-list">
+    @for (k of konten(); track k.name) {
+      <li><span>{{ k.name }} · {{ k.rolle }} · {{ k.aktiv ? 'aktiv' : 'gesperrt' }}</span><button class="button secondary compact" (click)="kontoBearbeiten(k, kontoFormular)" [disabled]="arbeitet()">Konto {{ k.name }} bearbeiten</button></li>
+    }
+  </ul>
+</section>

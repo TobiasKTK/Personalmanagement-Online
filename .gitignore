@@ -1,0 +1,21 @@
+/target/
+/data/
+/logs/
+/.tools/
+/.maven-cache/
+*.log
+/frontend/node_modules/
+/frontend/.angular/
+/frontend/playwright-report/
+/frontend/test-results/
+/.env
+
+# Lokale Zugangsdaten und Datenbanksicherungen
+.env
+.env.*
+!.env.example
+*.mv.db
+*.mv.db.sha256
+*.trace.db
+/backups/
+/sicherungen/

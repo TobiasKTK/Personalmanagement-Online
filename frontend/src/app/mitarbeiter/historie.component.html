@@ -1,0 +1,15 @@
+<section aria-label="Abteilungs- und Arbeitszeitverlauf">
+  <h3>Abteilungs- und Arbeitszeitverlauf</h3>
+  <p>Jeder Stand gilt ab dem angegebenen Datum bis zum nächsten Stand. Auch künftige Wechsel sind möglich. Namen von Organisationseinheiten werden in ihrer aktuellen Schreibweise angezeigt.</p>
+  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  <button class="button secondary compact" (click)="laden()" [disabled]="arbeitet()">Historie aktualisieren</button>
+  <form (ngSubmit)="speichern()"><fieldset [disabled]="arbeitet() || !geladen()"><legend>{{ bearbeitet ? 'Stand korrigieren' : 'Neuer Stand' }}</legend><div class="filter-grid">
+    <label class="field">Gültig ab<input name="gueltigAb" type="date" min="0001-01-01" max="9999-12-31" [(ngModel)]="eingabe.gueltigAb" required></label>
+    <label class="field">Organisationseinheit<select name="historieOrganisation" [(ngModel)]="eingabe.organisationseinheitId"><option [ngValue]="null">Keine Zuordnung</option>@for (o of organisationen(); track o.id) { <option [ngValue]="o.id">{{ o.name }}</option> }</select></label>
+    <label class="field">Wochenstunden<input name="historieStunden" type="number" min="0.5" max="168" step="0.01" [(ngModel)]="eingabe.wochenstunden" required></label>
+    <button class="button primary">Historischen Stand speichern</button>@if (bearbeitet) { <button type="button" class="button secondary" (click)="bearbeiten()">Korrektur abbrechen</button> }
+  </div></fieldset></form>
+  <ul class="management-list">@for (h of eintraege(); track h.id) { <li><span>Ab {{ h.gueltigAb | date:'dd.MM.yyyy' }} · {{ h.organisationseinheit || 'Keine Zuordnung' }} · {{ h.wochenstunden }} Std.</span><div class="actions"><button class="button secondary compact" [disabled]="arbeitet()" (click)="bearbeiten(h)">Stand korrigieren</button><button class="button secondary compact" [disabled]="arbeitet() || gesamt() <= 1" (click)="loeschen(h)">Stand entfernen</button></div></li> }</ul>
+  <div class="pagination"><span>{{ gesamt() }} Stände · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Historienseite" [disabled]="seite === 0 || arbeitet()" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Historienseite" [disabled]="(seite + 1) * 20 >= gesamt() || arbeitet()" (click)="seite = seite + 1; laden()">→</button></div></div>
+</section>

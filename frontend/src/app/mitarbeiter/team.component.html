@@ -1,0 +1,282 @@
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">PERSONAL</p>
+      <h1>Teamübersicht</h1>
+      <p class="subtitle">
+        Mitarbeitende finden, Stammdaten pflegen und Beschäftigung im Blick behalten.
+      </p>
+    </div>
+    <button [hidden]="!darfSchreiben()" [disabled]="laedt() || !!ladefehler()" class="button primary" id="neu" (click)="oeffnen()">
+      <span aria-hidden="true">＋</span> Mitarbeiter hinzufügen
+    </button>
+  </section>
+  <section class="stats" aria-label="Teamstatistik">
+    <article class="stat-card">
+      <div class="stat-top">
+        <span>Mitarbeitende gesamt</span
+        ><span class="stat-icon" aria-hidden="true">♧</span>
+      </div>
+      <strong id="anzahl">{{ zahl(statistik()?.anzahl) }}</strong
+      ><span class="stat-caption">Treffer der aktuellen Filter</span>
+    </article>
+    <article class="stat-card">
+      <div class="stat-top">
+        <span>Wochenstunden gesamt</span
+        ><span class="stat-icon" aria-hidden="true">◷</span>
+      </div>
+      <strong id="stunden">{{ zahl(statistik()?.wochenstunden) }}</strong
+      ><span class="stat-caption">Vereinbarte Stunden pro Woche</span>
+    </article>
+    <article class="stat-card">
+      <div class="stat-top">
+        <span>Bevorstehende Eintritte</span
+        ><span class="stat-icon" aria-hidden="true">↗</span>
+      </div>
+      <strong id="eintritte">{{
+        zahl(statistik()?.bevorstehendeEintritte)
+      }}</strong
+      ><span class="stat-caption">Nach dem gewählten Stichtag</span>
+    </article>
+  </section>
+  @if (statistik()?.historieUnbekannt) { <p class="banner" role="status">Für {{ statistik()?.historieUnbekannt }} Mitarbeiter fehlt ein historischer Stand. Angezeigt wird ihr erster bekannter Stand; diese Wochenstunden fehlen in der Summe.</p> }
+  <p class="stichtag-hinweis">Stichtag {{ formatiertesDatum(statistik()?.stichtag || null) }} ·
+    Aktuell beschäftigt: <strong id="aktiv">{{ statistik()?.aktiv ?? '–' }}</strong> ·
+    Ausgeschieden: <strong id="ausgeschieden">{{ statistik()?.ausgeschieden ?? '–' }}</strong>.
+    Abteilungszuordnung und Wochenstunden berücksichtigen den historischen Stand; die übrigen Stammdaten entsprechen dem heutigen Stand.</p>
+  <section
+    class="team-panel"
+    aria-labelledby="team-titel"
+    [attr.aria-busy]="laedt()"
+  >
+    <div class="panel-heading">
+      <div>
+        <h2 id="team-titel">
+          Alle Mitarbeitenden <span class="count">{{ gesamt() }}</span>
+        </h2>
+        <p>Die wichtigsten Informationen zu Ihrem Team.</p>
+      </div>
+      <button
+        class="button secondary compact"
+        id="aktualisieren"
+        [disabled]="laedt()"
+        (click)="laden(true)"
+      >
+        ↻ <span>Aktualisieren</span>
+      </button>
+    </div>
+    <div class="toolbar">
+      <label class="search"
+        ><span aria-hidden="true">⌕</span
+        ><span class="sr-only">Mitarbeitende suchen</span
+        ><input
+          #sucheFeld
+          id="suche"
+          type="search"
+          [value]="suche()"
+          placeholder="Name, Personal-Nr. oder Organisation …"
+          maxlength="120"
+          autocomplete="off"
+          (input)="sucheAendern(sucheFeld.value)" /></label
+      >
+    </div>
+    <div class="filter-grid">
+      <label class="field">Organisationseinheit<select id="org-filter" [(ngModel)]="organisationId" (ngModelChange)="filterAendern()">
+        <option value="">Alle Organisationseinheiten</option>
+        @for (o of organisationen(); track o.id) { <option [value]="o.id">{{ o.name }}</option> }
+      </select></label>
+      <label class="field">Beschäftigung<select id="beschaeftigung-filter" [(ngModel)]="beschaeftigung" (ngModelChange)="filterAendern()">
+        <option value="ALLE">Alle</option><option value="AKTIV">Aktuell beschäftigt</option><option value="KUENFTIG">Künftiger Eintritt</option><option value="AUSGESCHIEDEN">Ausgeschieden</option>
+      </select></label>
+      <label class="field">Stichtag<input id="stichtag" type="date" min="0001-01-01" max="9999-12-31" required [(ngModel)]="stichtag" (ngModelChange)="filterAendern()"></label>
+      <label class="field">Sortieren nach<select id="sortierung" [(ngModel)]="sortierung" (ngModelChange)="filterAendern()">
+        <option value="nachname">Nachname</option><option value="personalnummer">Personalnummer</option><option value="eintrittsdatum">Eintrittsdatum</option><option value="organisationseinheit">Organisationseinheit</option><option value="wochenstunden">Wochenstunden</option>
+      </select></label>
+      <label class="field">Reihenfolge<select id="richtung" [(ngModel)]="richtung" (ngModelChange)="filterAendern()"><option value="ASC">Aufsteigend</option><option value="DESC">Absteigend</option></select></label>
+      <button class="button secondary" (click)="zuruecksetzen()">Filter zurücksetzen</button>
+    </div>
+    @if (ladefehler()) {
+      <div class="banner error" role="alert">{{ ladefehler() }}</div>
+    }
+    @if (laedt()) {
+      <div class="loading" role="status">Mitarbeitende werden geladen …</div>
+    }
+    @if (!laedt() && !ladefehler() && eintraege().length > 0) {
+      <p class="table-hint" id="tabellen-hinweis">
+        Weitere Spalten erreichen Sie durch horizontales Scrollen.
+      </p>
+      <div
+        class="table-scroll"
+        tabindex="0"
+        role="region"
+        aria-label="Alle Mitarbeiterdaten"
+        aria-describedby="tabellen-hinweis"
+      >
+        <table class="stammdaten-tabelle">
+          <caption class="sr-only">
+            Mitarbeiterliste mit Personal- und Beschäftigungsdaten
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Personal-Nr.</th>
+              <th scope="col">Titel</th>
+              <th scope="col">Nachname</th>
+              <th scope="col">Vorname</th>
+              <th scope="col">Geburtsname</th>
+              <th scope="col">Kürzel</th>
+              <th scope="col">Geburtsdatum</th>
+              <th scope="col">Eintrittsdatum</th>
+              <th scope="col">Austrittsdatum</th>
+              <th scope="col">Org.-Einheit</th>
+              <th scope="col">Stelle</th>
+              <th scope="col">Beschäftigungsart / Beschäftigung</th>
+              <th scope="col">Abwesenheit am Stichtag</th>
+              <th scope="col">Wochenstunden</th>
+              <th scope="col"><span class="sr-only">Aktionen</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (person of eintraege(); track person.id) {
+              <tr>
+                <td class="personalnummer-cell">{{ person.personalnummer }}</td>
+                <td>{{ person.titel || "—" }}</td>
+                <td class="nachname-cell">{{ person.nachname }}</td>
+                <td>{{ person.vorname || "—" }}</td>
+                <td>{{ person.geburtsname || "—" }}</td>
+                <td>{{ person.kuerzel || "—" }}</td>
+                <td>{{ formatiertesDatum(person.geburtsdatum) }}</td>
+                <td>{{ formatiertesDatum(person.eintrittsdatum) }}</td>
+                <td>{{ formatiertesDatum(person.austrittsdatum) }}</td>
+                <td>{{ person.organisationseinheit || "—" }}</td>
+                <td>{{ person.stelle || "—" }}</td>
+                <td>{{ person.beschaeftigungsart || "—" }}<br><small>{{ statusText(person.beschaeftigung) }}</small></td>
+                <td>{{ statusText(person.abwesenheitAmStichtag) }}</td>
+                <td>{{ zahl(person.wochenstunden) }} Std.@if (!person.historieBekannt) { <small title="Für diesen Stichtag ist kein historischer Stand bekannt. Angezeigt wird der erste bekannte Stand."> · Stand unbekannt</small> }</td>
+                <td>
+                  <div class="actions">
+                    <button class="button secondary compact" [attr.aria-label]="person.name + ' Details'" (click)="details.set(person)">Details</button>
+                    <button [hidden]="!darfSchreiben()"
+                      class="icon-button"
+                      [attr.aria-label]="person.name + ' bearbeiten'"
+                      title="Bearbeiten"
+                      (click)="oeffnen(person)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5" />
+                      </svg></button
+                    ><button
+                      class="icon-button delete" [hidden]="!darfSchreiben()"
+                      [attr.aria-label]="person.name + ' löschen'"
+                      title="Löschen"
+                      (click)="loeschenOeffnen(person)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!laedt() && !ladefehler() && eintraege().length === 0) {
+      <div class="empty">
+        <div class="empty-art" aria-hidden="true">＋</div>
+        <h3>
+          {{
+            hatFilter()
+              ? "Keine Mitarbeitenden gefunden."
+              : "Ihr Team beginnt hier."
+          }}
+        </h3>
+        <p>
+          {{
+            hatFilter()
+              ? "Ändern Sie Ihre Suche oder setzen Sie die Filter zurück."
+              : darfSchreiben() ? "Legen Sie den ersten Mitarbeiter an und behalten Sie alle Daten im Blick." : "Sobald Ihre Personalverwaltung Mitarbeitende angelegt hat, finden Sie diese hier."
+          }}
+        </p>
+        @if (!hatFilter() && darfSchreiben()) {
+          <button class="button secondary" (click)="oeffnen()">
+            Ersten Mitarbeiter hinzufügen
+          </button>
+        }
+        @if (hatFilter()) { <button class="button secondary" (click)="zuruecksetzen()">Alle Mitarbeitenden anzeigen</button> }
+      </div>
+    }
+    <div class="pagination">
+      <span id="seiteninfo">{{ seiteninfo() }}</span>
+      <div>
+        <button
+          class="page-button"
+          aria-label="Vorherige Seite"
+          [disabled]="laedt() || !!ladefehler() || seite() === 0"
+          (click)="blaettern(-1)"
+        >
+          ←</button
+        ><span>Seite {{ seite() + 1 }}</span
+        ><button
+          class="page-button"
+          aria-label="Nächste Seite"
+          [disabled]="
+            laedt() || !!ladefehler() || (seite() + 1) * groesse >= gesamt()
+          "
+          (click)="blaettern(1)"
+        >
+          →
+        </button>
+      </div>
+    </div>
+  </section>
+@if (editorGeoeffnet()) {
+  <app-mitarbeiter-editor
+    [person]="bearbeitet()"
+    [organisationen]="organisationen()"
+    (gespeichert)="gespeichert($event)"
+    (geschlossen)="editorGeoeffnet.set(false)"
+  />
+}
+@if (details(); as person) {
+  <app-mitarbeiter-details [person]="person" [darfSchreiben]="darfSchreiben()" (geschlossen)="details.set(null); laden()" />
+}
+<dialog
+  #loeschdialog
+  id="loeschdialog"
+  aria-labelledby="loesch-titel"
+  (cancel)="loeschenAbbrechen($event)"
+>
+  <div class="dialog-heading">
+    <h2 id="loesch-titel">Mitarbeiter löschen?</h2>
+  </div>
+  <p class="dialog-description">
+    Möchten Sie {{ loeschPerson()?.name }} wirklich löschen? Diese Aktion kann
+    nicht rückgängig gemacht werden.
+  </p>
+  @if (loeschfehler()) {
+    <div class="banner error" role="alert">{{ loeschfehler() }}</div>
+  }
+  <div class="dialog-footer">
+    <button
+      class="button secondary"
+      autofocus
+      [disabled]="loescht()"
+      (click)="loeschenAbbrechen()"
+    >
+      Abbrechen</button
+    ><button
+      class="button danger"
+      [disabled]="loescht()"
+      (click)="loeschenBestaetigen()"
+    >
+      {{ loescht() ? "Wird gelöscht …" : "Endgültig löschen" }}
+    </button>
+  </div>
+</dialog>
+@if (meldung()) {
+  <div class="toast" role="status">{{ meldung() }}</div>
+}
+

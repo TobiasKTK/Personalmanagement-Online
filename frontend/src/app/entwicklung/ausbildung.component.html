@@ -1,0 +1,30 @@
+<section class="team-panel administration" aria-label="Ausbildungsverwaltung">
+  <h1>Ausbildung und Ausbildungspläne</h1>
+  @if (fehler()) { <p role="alert" class="banner error">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  <form #ausbildungForm="ngForm" (ngSubmit)="speichern()"><fieldset [disabled]="arbeitet()"><legend>{{ ausbildung.id ? 'Ausbildungsverhältnis bearbeiten' : 'Ausbildungsverhältnis anlegen' }}</legend><div class="filter-grid">
+    <label class="field">Auszubildende Person<select name="person" [(ngModel)]="ausbildung.mitarbeiterId" [disabled]="!!ausbildung.id" required><option [ngValue]="0" disabled>Bitte wählen</option>@for (p of personen(); track p.id) { <option [ngValue]="p.id">{{ p.name }} · {{ p.personalnummer }}</option> }</select></label>
+    <label class="field">Ausbildungsberuf<input name="beruf" [(ngModel)]="ausbildung.beruf" required maxlength="120"></label>
+    <label class="field">Ausbildungsstätte / Berufsschule<input name="institution" [(ngModel)]="ausbildung.institution" maxlength="240"></label>
+    <label class="field">Verantwortliche Ausbilderperson<select name="ausbilder" [(ngModel)]="ausbildung.ausbilderId"><option [ngValue]="null">Nicht zugeordnet</option>@for (p of personen(); track p.id) { @if (p.id !== ausbildung.mitarbeiterId) { <option [ngValue]="p.id">{{ p.name }} · {{ p.personalnummer }}</option> } }</select></label>
+    <label class="field">Ausbildungsbeginn<input name="beginn" type="date" [(ngModel)]="ausbildung.beginn" required></label>
+    <label class="field">Ausbildungsende<input name="ende" type="date" [(ngModel)]="ausbildung.ende" required></label>
+    <label class="field">Ausbildungsstatus<select name="status" [(ngModel)]="ausbildung.status"><option value="GEPLANT">Geplant</option><option value="AKTIV">Aktiv</option><option value="ABGESCHLOSSEN">Abgeschlossen</option><option value="ABGEBROCHEN">Abgebrochen</option></select></label>
+  </div><div class="actions"><button class="button primary" [disabled]="ausbildungForm.invalid || !ausbildung.mitarbeiterId">Ausbildungsverhältnis speichern</button><button type="button" class="button secondary" (click)="bearbeiten()">Ausbildungsformular leeren</button></div></fieldset></form>
+  <ul class="management-list">@for (a of ausbildungen(); track a.id) { <li><div><strong>{{ personName(a.mitarbeiterId) }} · {{ a.beruf }}</strong><p>{{ a.beginn }} bis {{ a.ende }} · {{ statusnamen[a.status] }}</p><p>{{ a.institution }} · Ausbilder: {{ personName(a.ausbilderId) }}</p></div><div class="actions"><button class="button secondary" (click)="bearbeiten(a)" [disabled]="arbeitet()">Ausbildung {{ a.id }} bearbeiten</button><button class="button secondary" (click)="planLaden(a.id)" [disabled]="arbeitet()">Ausbildungsplan {{ a.id }} öffnen</button><button class="button secondary" (click)="entfernen('ausbildungen', a)" [disabled]="arbeitet()">Ausbildung {{ a.id }} löschen</button></div></li> } @empty { <li>Noch keine Ausbildungsverhältnisse vorhanden.</li> }</ul>
+  <section aria-label="Ausbildungsplan"><h2>Ausbildungsplan</h2>
+    <label class="field">Ausbildung für Plan<select [(ngModel)]="planId" (ngModelChange)="planLaden($event)" [disabled]="arbeitet()"><option [ngValue]="0">Bitte wählen</option>@for (a of ausbildungen(); track a.id) { <option [ngValue]="a.id">{{ personName(a.mitarbeiterId) }} · {{ a.beruf }} · {{ a.beginn }}</option> }</select></label>
+    @if (planId && plan(); as a) {
+      <p>{{ a.beginn }} bis {{ a.ende }} · {{ fortschritt() }}. Parallele Stationen sind möglich, etwa Berufsschule und Betrieb.</p>
+      <form #stationForm="ngForm" (ngSubmit)="stationSpeichern()"><fieldset [disabled]="arbeitet()"><legend>{{ station.id ? 'Ausbildungsstation bearbeiten' : 'Ausbildungsstation anlegen' }}</legend><div class="filter-grid">
+        <label class="field">Stationstitel<input name="titel" [(ngModel)]="station.titel" required maxlength="120"></label>
+        <label class="field">Lernziele / Aufgaben<textarea name="lernziele" [(ngModel)]="station.lernziele" required maxlength="4000" rows="3"></textarea></label>
+        <label class="field">Organisation der Station<select name="organisation" [(ngModel)]="station.organisationId"><option [ngValue]="null">Keine Organisationseinheit</option>@for (o of organisationen(); track o.id) { <option [ngValue]="o.id">{{ o.name }}</option> }</select></label>
+        <label class="field">Stationsbeginn<input name="beginn" type="date" [(ngModel)]="station.beginn" [min]="a.beginn" [max]="a.ende" required></label>
+        <label class="field">Stationsende<input name="ende" type="date" [(ngModel)]="station.ende" [min]="a.beginn" [max]="a.ende" required></label>
+        <label class="field">Stationsstatus<select name="status" [(ngModel)]="station.status"><option value="GEPLANT">Geplant</option><option value="AKTIV">Aktiv</option><option value="ABGESCHLOSSEN">Abgeschlossen</option></select></label>
+      </div><div class="actions"><button class="button primary" [disabled]="stationForm.invalid">Ausbildungsstation speichern</button><button type="button" class="button secondary" (click)="stationBearbeiten()">Stationsformular leeren</button></div></fieldset></form>
+      <ol class="management-list">@for (s of stationen(); track s.id) { <li><div><strong>{{ s.titel }}</strong><p>{{ s.beginn }} bis {{ s.ende }} · {{ statusnamen[s.status] }}</p><p>{{ orgName(s.organisationId) }}</p><p class="mehrzeilig">{{ s.lernziele }}</p></div><div class="actions"><button class="button secondary" (click)="stationBearbeiten(s)" [disabled]="arbeitet()">{{ s.titel }} bearbeiten</button><button class="button secondary" (click)="entfernen('stationen', s)" [disabled]="arbeitet()">{{ s.titel }} löschen</button></div></li> } @empty { <li>Noch keine Ausbildungsstationen vorhanden.</li> }</ol>
+    }
+  </section>
+</section>

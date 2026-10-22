@@ -1,0 +1,30 @@
+<section aria-label="Urlaubskonto">
+  <h3>Urlaubskonto</h3>
+  <form class="filter-grid" (ngSubmit)="laden()"><label class="field">Urlaubsjahr<input type="number" name="jahr" [(ngModel)]="jahr" min="1" max="9999" required [disabled]="arbeitet()"></label><button class="button secondary" [disabled]="arbeitet()">Urlaubskonto laden</button></form>
+  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  @if (konto(); as k) {
+    @if (k.eingerichtet) {
+      <p><strong>{{ k.anspruch }} Tage Anspruch + {{ k.uebertrag }} Tage Übertrag</strong> · {{ k.genommen }} genommen · {{ k.geplant }} geplant · {{ k.beantragt }} beantragt</p>
+      <p><strong>{{ k.rest }} Tage Resturlaub · {{ k.verfuegbar }} Tage nach offenen Anträgen verfügbar</strong></p>
+      @if (k.feiertagskalenderId) { <p>Feiertagskalender: {{ k.kalenderName }} · {{ k.kalenderFeiertage.length }} zentrale Feiertage · {{ k.ausnahmen.length }} individuelle Ausnahmen.</p> }
+    } @else { <p>Für {{ k.jahr }} ist noch kein Urlaubskonto eingerichtet. Der Anspruch muss ausdrücklich festgelegt werden.</p> }
+    @if (darfSchreiben()) {
+      <form (ngSubmit)="speichern()">
+        <fieldset [disabled]="arbeitet() || jahr !== k.jahr"><legend>Urlaubsregeln für {{ k.jahr }}</legend>
+          <label class="field">Jahresanspruch in Tagen<input type="number" name="anspruch" [(ngModel)]="anspruch" min="0" max="366" step="0.5" required></label>
+          <label class="field">Bestätigter Übertrag aus dem Vorjahr<input type="number" name="uebertrag" [(ngModel)]="uebertrag" min="0" max="366" step="0.5" required></label>
+          <button type="button" class="button secondary compact" (click)="vorjahrUebernehmen()" [disabled]="jahr <= 1">Resturlaub aus Vorjahr übernehmen</button>
+          <p>Regelmäßige Arbeitstage</p>
+          <div class="actions">@for (tag of wochentage; track tag; let i = $index) { <label><input type="checkbox" [name]="'tag' + i" [ngModel]="arbeitstage.includes(i + 1)" (ngModelChange)="waehlen(i + 1, $event)">{{ tag }}</label> }</div>
+          <label class="field">Zentraler Feiertagskalender<select name="feiertagskalender" [(ngModel)]="kalenderId"><option [ngValue]="null">Kein zentraler Kalender</option>@for (f of kalender(); track f.id) { <option [ngValue]="f.id">{{ f.name }} · {{ f.jahr }}</option> }</select></label>
+          @if (kalenderId !== null) { <label class="field">Ausnahmen: zentrale Feiertage als reguläre Arbeitstage behandeln (JJJJ-MM-TT)<textarea name="ausnahmen" rows="3" [(ngModel)]="ausnahmen"></textarea></label> }
+          <label class="field">Feiertage und zusätzliche arbeitsfreie Tage (JJJJ-MM-TT, eine Zeile pro Datum)<textarea name="feiertage" rows="4" [(ngModel)]="feiertage"></textarea></label>
+          <p>Zusätzliche arbeitsfreie Tage gelten ergänzend zum zentralen Kalender und haben Vorrang vor Ausnahmen.</p>
+          <p>Die Angaben gelten für das ganze Jahr. Anspruch und Übertrag werden ausdrücklich gepflegt, auch in halben Tagen. Der Übertrag wird beim Speichern ersetzt, nicht addiert. Keine automatische Übernahme oder Verfallsberechnung. Heute und zukünftige Urlaubstage zählen als geplant.</p>
+          <button class="button primary" [disabled]="!arbeitstage.length">Urlaubskonto speichern</button>
+        </fieldset>
+      </form>
+    }
+  }
+</section>

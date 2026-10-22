@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e7eaee">
+  <title>Anmeldung · Personalmanagement Online</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/anmeldung/login.css">
+  <script src="/anmeldung/login.js" defer></script>
+</head>
+<body>
+  <main class="login-layout">
+    <div class="login-shell">
+      <section class="login-card" aria-labelledby="login-titel">
+        <p class="login-produkt">Personalmanagement Online</p>
+        <h1 id="login-titel">Anmeldung für Mitarbeiter</h1>
+        <p class="login-message" id="login-meldung" role="alert" {{meldungVersteckt}}>{{meldung}}</p>
+        <form id="login-formular" action="/login" method="post">
+          <input type="hidden" name="{{csrfName}}" value="{{csrfToken}}">
+          <div class="login-field">
+            <label for="kontoname">E-Mail oder Kontoname</label>
+            <input id="kontoname" name="username" type="text" value="{{kontoname}}" placeholder="name@firma.de oder Kontoname"
+              autocomplete="username" autocapitalize="none" spellcheck="false"
+              required maxlength="254" aria-describedby="kontoname-fehler">
+            <span class="field-error" id="kontoname-fehler" aria-live="polite"></span>
+          </div>
+          <div class="login-field">
+            <label for="passwort">Passwort</label>
+            <input id="passwort" name="password" type="password" placeholder="Geben Sie Ihr Passwort ein"
+              autocomplete="current-password" required aria-describedby="passwort-fehler">
+            <span class="field-error" id="passwort-fehler" aria-live="polite"></span>
+          </div>
+          <div class="login-actions">
+            <button id="anmelden" type="submit">Anmelden</button>
+          </div>
+        </form>
+        <p class="passwort-hilfe"><a href="/passwort-vergessen">Passwort vergessen?</a></p>
+      </section>
+      <footer class="login-footer">
+        <details class="anmeldehilfe">
+          <summary>Hilfe</summary>
+          <div class="hilfe-inhalt">
+            <h2>So melden Sie sich an</h2>
+            <p>Verwenden Sie Ihre bestätigte E-Mail-Adresse oder den Kontonamen Ihrer Administration, beispielsweise <strong>personalverwaltung</strong>. Ihre E-Mail-Adresse können Sie nach der Anmeldung unter <strong>Meine E-Mail</strong> hinterlegen und bestätigen.</p>
+            <p>Kontonamen bestehen aus 3–80 Zeichen: Kleinbuchstaben (a–z), Ziffern, Punkt, Unterstrich oder Bindestrich. Beim Passwort wird zwischen Groß- und Kleinschreibung unterschieden.</p>
+            <p>Falls Sie noch kein Konto haben oder Ihr Konto gesperrt ist, wenden Sie sich an Ihre Administration.</p>
+          </div>
+        </details>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>

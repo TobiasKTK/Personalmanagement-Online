@@ -1,0 +1,41 @@
+/* Navigation und Firmenkontext, unabhängig von den Fachansichten. */
+.sidebar { position: fixed; inset: 0 auto 0 0; width: 256px; background: var(--surface); border-right: 1px solid var(--line); padding: var(--space-5) var(--space-4); overflow-y: auto; display: flex; flex-direction: column; }
+.sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.brand { display: flex; align-items: center; gap: var(--space-3); color: var(--text); text-decoration: none; font-size: 1rem; font-weight: 700; }
+.brand-mark { display: grid; place-items: center; width: 36px; height: 36px; background: var(--primary); color: var(--surface); border-radius: var(--radius); font-size: .8125rem; letter-spacing: -.04em; flex-shrink: 0; }
+.brand-sub { display: block; color: var(--muted); font-size: .6875rem; font-weight: 400; margin-top: 2px; }
+.navigation { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-6); }
+.workspace-label { color: var(--muted); font-size: .6875rem; font-weight: 650; letter-spacing: .1em; padding: 0 var(--space-3); margin: var(--space-5) 0 var(--space-2); }
+.workspace-label:first-child { margin-top: 0; }
+.nav-item { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 44px; text-align: left; padding: .625rem .75rem; border: 1px solid transparent; border-radius: var(--radius); color: var(--muted); background: transparent; font-size: .875rem; font-weight: 500; line-height: 1.4; text-decoration: none; }
+.nav-item svg { flex-shrink: 0; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.nav-item:hover { color: var(--primary); background: var(--surface-subtle); }
+.nav-item.active { color: var(--primary); background: var(--primary-soft); font-weight: 650; border-color: #c7dbff; }
+.sidebar-bottom { border-top: 1px solid var(--line); padding: var(--space-4) var(--space-3) 0; margin-top: var(--space-5); color: var(--muted); font-size: .75rem; }
+.button.navigation-toggle { display: none; }
+main { min-width: 0; width: calc(100% - 256px); margin-left: 256px; padding: 0 var(--space-6) var(--space-7); }
+.topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; min-height: 88px; padding-block: var(--space-4); border-bottom: 1px solid var(--line); gap: var(--space-4); font-size: .8125rem; }
+.company-context { min-width: 0; overflow-wrap: anywhere; }
+.company-context > span { display: block; color: var(--muted); font-size: .75rem; margin-bottom: 2px; }
+.company-context strong { font-weight: 650; }
+.mandanten-kennung { display: inline-block; color: var(--muted); font-size: .75rem; margin-left: var(--space-2); }
+.topbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.account-context { color: var(--muted); margin-right: var(--space-2); font-size: .75rem; }
+.account-context strong, .account-context time { display: block; }
+.account-context strong { color: var(--text); font-size: .8125rem; font-weight: 500; }
+.notification-count { background: var(--primary-soft); color: var(--primary); border-radius: var(--radius-sm); min-width: 22px; padding: 1px 5px; font-variant-numeric: tabular-nums; }
+.topbar-actions svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+@media (min-width: 1600px) { main { padding-inline: var(--space-7); } }
+@media (max-width: 1100px) { main { padding-inline: var(--space-5); } .account-context time { display: none; } }
+@media (max-width: 780px) {
+  .sidebar { position: static; width: 100%; padding: var(--space-4); border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+  .button.navigation-toggle { display: inline-flex; }
+  .navigation { display: none; margin-top: var(--space-4); }
+  .navigation.is-open { display: flex; }
+  .sidebar-bottom { display: none; }
+  main { margin-left: 0; width: 100%; padding: 0 var(--space-4) var(--space-6); }
+  .topbar { gap: var(--space-3); }
+  .topbar-actions { width: 100%; }
+  .account-context { flex: 1 1 auto; }
+  .notification-label { display: none; }
+}

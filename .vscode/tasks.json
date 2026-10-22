@@ -1,0 +1,13 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Angular und Java bauen",
+            "type": "shell",
+            "command": ".\\mvnw.cmd",
+            "args": ["-B", "-ntp", "-DskipTests", "compile"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        }
+    ]
+}

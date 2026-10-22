@@ -1,0 +1,30 @@
+<section class="team-panel administration" aria-label="Teamkalender">
+  <h1>Teamkalender</h1>
+  <p>Abwesenheiten im gesamten Team. Die Abteilungszuordnung gilt zum Monatsende. Für Details auf einen Namen klicken.</p>
+  <form class="filter-grid" (ngSubmit)="laden(true)">
+    <label class="field">Monat<input type="month" name="monat" [(ngModel)]="monat" required min="0001-01" max="9999-12"></label>
+    <label class="field">Organisationseinheit<select name="organisation" [(ngModel)]="organisation"><option value="">Alle Organisationseinheiten</option>@for (o of organisationen(); track o.id) { <option [value]="o.id">{{ o.name }}</option> }</select></label>
+    <button class="button primary" [disabled]="laedt()">Kalender anzeigen</button>
+  </form>
+  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (laedt()) { <p role="status">Kalender wird geladen …</p> }
+  <p class="legende"><span class="URLAUB">U · Urlaub / ½ · halber Tag</span><span class="KRANKHEIT">K · Krankheit</span><span class="ELTERNZEIT">E · Elternzeit</span><span class="SONSTIGES">S · Sonstiges</span></p>
+  @if (daten(); as d) {
+    <div class="table-scroll" tabindex="0" aria-label="Monatsübersicht, horizontal scrollbar">
+      <table class="kalender"><caption>Abwesenheiten {{ d.beginn.slice(0, 7) }}</caption><thead><tr><th scope="col">
+        <label class="field kalender-suche">Mitarbeiter
+          <input type="search" name="suche" aria-label="Mitarbeiter suchen" placeholder="Name oder Personalnummer" maxlength="120" autocomplete="off"
+            [ngModel]="suche" (ngModelChange)="suchen($event)" (keydown.enter)="$event.preventDefault(); laden(true)">
+        </label>
+      </th>@for (tag of tage(); track tag) { <th scope="col" [class.wochenende]="wochenende(tag)">{{ tag.slice(8) }}</th> }</tr></thead>
+        <tbody>@for (p of d.eintraege; track p.id) {
+          <tr><th scope="row"><button class="personen-link" (click)="oeffnen(p.id)">{{ p.name }}</button><small>{{ p.organisationseinheit || 'Ohne Zuordnung' }}{{ p.historieBekannt ? '' : ' · historischer Stand unbekannt' }}</small></th>
+            @for (tag of tage(); track tag) { <td [class]="art(p, tag)" [class.wochenende]="wochenende(tag)" [attr.aria-label]="tag + ': ' + (halb(p, tag) ? 'Halber Urlaubstag' : (arten[art(p, tag)] || 'Keine Abwesenheit'))" [title]="halb(p, tag) ? 'Halber Urlaubstag' : (arten[art(p, tag)] || '')">{{ halb(p, tag) ? '½' : (art(p, tag).slice(0, 1) || '·') }}</td> }
+          </tr>
+        } @empty { <tr><td [attr.colspan]="tage().length + 1">Keine Mitarbeiter für diese Auswahl.</td></tr> }</tbody>
+      </table>
+    </div>
+    <div class="pagination"><span>{{ d.gesamt }} Mitarbeiter · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Kalenderseite" [disabled]="seite === 0 || laedt()" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Kalenderseite" [disabled]="(seite + 1) * 20 >= d.gesamt || laedt()" (click)="seite = seite + 1; laden()">→</button></div></div>
+  }
+</section>
+@if (details(); as person) { <app-mitarbeiter-details [person]="person" [darfSchreiben]="sitzung()?.rolle !== 'LESEN'" (geschlossen)="details.set(null); laden()" /> }

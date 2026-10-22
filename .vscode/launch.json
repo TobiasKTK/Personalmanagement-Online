@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Personalmanagement Online",
+            "request": "launch",
+            "mainClass": "de.pemonline.PemonlineApplication",
+            "preLaunchTask": "Angular und Java bauen",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        }
+    ]
+}

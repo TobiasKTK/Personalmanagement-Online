@@ -1,0 +1,26 @@
+:host { display: block; min-width: 0; }
+.dashboard-stand { margin: 0 0 var(--space-4); color: var(--muted); font-size: .8125rem; }
+.dashboard-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: var(--space-4); }
+.dashboard-card { display: flex; flex-direction: column; padding: var(--space-5); }
+.dashboard-card h2 { font-size: 1rem; }
+.dashboard-zahl { font-size: 2.5rem; font-weight: 650; line-height: 1.2; letter-spacing: -.04em; font-variant-numeric: tabular-nums; margin-top: var(--space-4); }
+.dashboard-zahl small { font-size: 1rem; font-weight: 400; letter-spacing: normal; color: var(--muted); }
+.dashboard-card p { font-size: .875rem; color: var(--muted); margin: var(--space-3) 0; }
+.dashboard-card .dashboard-help { font-size: .8125rem; }
+ul { list-style: none; padding: 0; margin: 0 0 var(--space-4); }
+li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); padding-block: var(--space-3); border-bottom: 1px solid var(--line); font-size: .875rem; overflow-wrap: anywhere; }
+li small { color: var(--muted); }
+.dashboard-empty { color: var(--muted); border: 0; }
+.dashboard-link { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); margin-top: auto; padding-top: var(--space-4); min-height: 44px; font-size: .875rem; font-weight: 600; }
+.dashboard-outlook { margin-top: var(--space-5); }
+.outlook-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.outlook-grid article { padding: 0 var(--space-5) var(--space-4); }
+.outlook-grid article + article { border-left: 1px solid var(--line); }
+.outlook-grid h3 { margin: 0 0 var(--space-2); }
+.outlook-grid time { color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 780px) { .dashboard-card { padding: var(--space-4); } }
+@media (max-width: 540px) {
+  .outlook-grid { grid-template-columns: 1fr; }
+  .outlook-grid article { padding: 0 var(--space-4) var(--space-4); }
+  .outlook-grid article + article { border-left: 0; border-top: 1px solid var(--line); padding-top: var(--space-4); }
+}

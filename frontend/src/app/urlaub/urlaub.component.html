@@ -1,0 +1,52 @@
+<section class="team-panel administration" aria-label="Urlaub und Freigaben">
+  <h1>Urlaub und Freigaben</h1>
+  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  @if (arbeitet()) { <p role="status">Daten werden verarbeitet …</p> }
+  @if (profil(); as p) {
+    <p>Freigabe durch: {{ p.modus === 'ALLE' ? 'alle mit Personal- oder Administrationsrechten' : p.genehmiger }}.</p>
+    <details><summary>Mein Urlaubskonto</summary>@if (!arbeitet()) { <app-urlaubskonto [person]="p.mitarbeiterId" /> }</details>
+    <details><summary>Meinen Urlaub exportieren</summary><form (ngSubmit)="exportieren()"><fieldset [disabled]="arbeitet()"><legend>Genehmigte Urlaube für Outlook</legend><label class="field">Exportjahr<input type="number" name="exportJahr" [(ngModel)]="exportJahr" min="1" max="9999" required></label><button class="button secondary">Meine Urlaube als ICS herunterladen</button><p>Ein Import ist eine Momentaufnahme. Halbe Tage werden gekennzeichnet, ohne feste Tageszeit. Stornierungen später in Outlook selbst entfernen.</p></fieldset></form></details>
+    <h2>Urlaub beantragen</h2>
+    <form (ngSubmit)="beantragen()"><fieldset [disabled]="arbeitet()"><legend>Neuer Antrag</legend><div class="filter-grid">
+      <label class="field">Beginn<input type="date" name="beginn" [(ngModel)]="eingabe.beginn" [min]="heute" required></label>
+      <label class="field">Ende<input type="date" name="ende" [(ngModel)]="eingabe.ende" [min]="eingabe.beginn || heute" required></label>
+      <label><input type="checkbox" name="halb" [(ngModel)]="eingabe.halberTag"> Halber Tag (Beginn = Ende)</label>
+      <label class="field">Notiz (optional)<input name="notiz" [(ngModel)]="eingabe.notiz" maxlength="500"></label>
+      <button class="button primary">Urlaubsantrag einreichen</button>
+    </div></fieldset></form>
+  } @else if (!arbeitet()) { <p>Zum Beantragen von Urlaub muss die Administration dein Konto im Mitarbeiterdialog zuordnen und dein Urlaubskonto einrichten.</p> }
+  <h2>{{ freigaben ? 'Anträge zur Freigabe' : 'Meine Anträge' }}</h2>
+  @if (fokusId) { <p>Geöffneter Antrag aus einer Benachrichtigung. <button class="button secondary compact" [disabled]="arbeitet()" (click)="laden(true)">Alle Anträge anzeigen</button></p> }
+  <form class="filter-grid" (ngSubmit)="laden(true)"><fieldset [disabled]="arbeitet()"><legend>Anträge filtern</legend>
+    @if (sitzung()?.rolle !== 'LESEN') { <label><input type="checkbox" name="freigaben" [(ngModel)]="freigaben"> Zuständige Freigaben anzeigen</label> }
+    <label class="field">Status<select name="status" [(ngModel)]="status"><option value="ALLE">Alle Status</option><option value="BEANTRAGT">Beantragt</option><option value="GENEHMIGT">Genehmigt</option><option value="ABGELEHNT">Abgelehnt</option><option value="ZURUECKGEZOGEN">Zurückgezogen</option><option value="STORNIERT">Storniert</option></select></label>
+    <button class="button secondary">Anträge anzeigen</button>
+  </fieldset></form>
+  <ul class="management-list">@for (a of antraege(); track a.id) {
+    <li><div><strong>{{ a.name }}</strong> · {{ a.beginn | date:'dd.MM.yyyy' }} – {{ a.ende | date:'dd.MM.yyyy' }}{{ a.halberTag ? ' · ½ Tag' : '' }}<p>{{ statusTexte[a.status] }} · {{ a.notiz || 'Keine Notiz' }}</p>@if (a.bearbeiter) { <p>{{ a.bearbeiter }}: {{ a.entscheidung || statusTexte[a.status] }}</p> }</div>
+      <div class="actions">@if (a.status === 'BEANTRAGT') {
+        @if (freigaben) { <button class="button primary compact" [disabled]="arbeitet()" (click)="vorbereiten(a, 'GENEHMIGEN')">Genehmigen</button><button class="button secondary compact" [disabled]="arbeitet()" (click)="vorbereiten(a, 'ABLEHNEN')">Ablehnen</button> }
+        @else { <button class="button secondary compact" [disabled]="arbeitet()" (click)="vorbereiten(a, 'ZURUECKZIEHEN')">Zurückziehen</button> }
+      } @if (a.status === 'GENEHMIGT' && (freigaben || a.beginn >= heute)) { <button class="button secondary compact" [disabled]="arbeitet()" (click)="vorbereiten(a, 'STORNIEREN')">Stornieren</button> }</div>
+    </li>
+  } @empty { <li>Keine Anträge für diese Auswahl.</li> }</ul>
+  @if (entscheidung; as e) {
+    <form (ngSubmit)="entscheiden()"><fieldset [disabled]="arbeitet()"><legend>{{ e.aktion }} · {{ e.antrag.name }} · {{ e.antrag.beginn | date:'dd.MM.yyyy' }}</legend>
+      @if (e.besetzung; as b) {
+        <h3>Besetzung prüfen</h3>
+        @for (hinweis of b.hinweise; track hinweis) { <p>{{ hinweis }}</p> }
+        @if (b.warnungen.length) {
+          <p class="banner error" role="alert">Die Mindestbesetzung wird an {{ b.warnungen.length }} Tag(en) unterschritten.</p>
+          <ul>@for (w of b.warnungen; track w.datum) { <li>{{ w.datum | date:'dd.MM.yyyy' }} · {{ w.organisation }}: {{ w.vorher }} → {{ w.danach }} verfügbar, mindestens {{ w.mindestbesetzung }} erforderlich.</li> }</ul>
+          <label><input type="checkbox" name="warnungBestaetigt" [(ngModel)]="e.warnungBestaetigt" required> Trotz Besetzungswarnung genehmigen</label>
+        } @else { <p>Keine Unterschreitung der eingerichteten Mindestbesetzung ermittelt.</p> }
+        <button type="button" class="button secondary" (click)="vorbereiten(e.antrag, e.aktion)">Besetzung neu prüfen</button>
+        <p>Berechnung nach Tagesanteilen und den hinterlegten Arbeitstagen, Feiertagen und Abwesenheiten. Keine Schicht- oder Qualifikationsplanung.</p>
+      }
+      <label class="field">Begründung (optional)<textarea name="begruendung" [(ngModel)]="e.begruendung" maxlength="500"></textarea></label>
+      <button class="button primary" [disabled]="!!e.besetzung?.warnungen?.length && !e.warnungBestaetigt">Entscheidung bestätigen</button><button type="button" class="button secondary" (click)="entscheidung = null">Abbrechen</button>
+    </fieldset></form>
+  }
+  <div class="pagination"><span>{{ gesamt() }} Anträge · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Antragsseite" [disabled]="seite === 0 || arbeitet()" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Antragsseite" [disabled]="(seite + 1) * 20 >= gesamt() || arbeitet()" (click)="seite = seite + 1; laden()">→</button></div></div>
+</section>

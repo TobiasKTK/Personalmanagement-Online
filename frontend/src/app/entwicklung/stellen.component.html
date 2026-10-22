@@ -1,0 +1,47 @@
+<section class="team-panel administration" aria-label="Stellenverwaltung">
+  <h1>Stellen und Planstellen</h1>
+  <p>Stellenprofile beschreiben Aufgaben und Anforderungen. Planstellen ordnen ein Profil einer Organisationseinheit und optional einer Person zu.</p>
+  @if (fehler()) { <p role="alert" class="banner error">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  <section aria-label="Stellenkatalog"><h2>Stellenkatalog</h2>
+    <form #profilForm="ngForm" (ngSubmit)="profilSpeichern()">
+      <fieldset [disabled]="arbeitet()"><legend>{{ profil.id ? 'Stellenprofil bearbeiten' : 'Stellenprofil erstellen' }}</legend>
+        <div class="filter-grid">
+          <label class="field">Profilname<input name="profilname" [(ngModel)]="profil.name" maxlength="120" required></label>
+          <label class="field">Stellenbeschreibung<textarea name="beschreibung" [(ngModel)]="profil.beschreibung" maxlength="4000" rows="3"></textarea></label>
+          <label class="field">Aufgabenbeschreibung<textarea name="aufgaben" [(ngModel)]="profil.aufgaben" maxlength="4000" rows="3"></textarea></label>
+        </div>
+        <h4>Soll-Kenntnisse, Abschlüsse, Bescheinigungen und Pflichtfortbildungen</h4>
+        <p>Die Einträge werden unter „Kenntnisse“ im Katalog gepflegt. Niveau 1 = Grundlagen, 2 = Basis, 3 = selbstständig, 4 = fortgeschritten, 5 = Experte. Für reine Teilnahme- oder Abschlussnachweise Niveau 1 verwenden.</p>
+        @for (a of profil.anforderungen; track $index; let i = $index) {
+          <div class="anforderung">
+            <label class="field">Anforderung {{ i + 1 }}<select [name]="'kenntnis' + i" [(ngModel)]="a.kenntnisId" required><option [ngValue]="0" disabled>Bitte wählen</option>@for (k of kenntnisse(); track k.id) { <option [ngValue]="k.id">{{ k.name }} · {{ kategorieName(k.kategorie) }}</option> }</select></label>
+            <label class="field">Soll-Niveau {{ i + 1 }}<input type="number" [name]="'niveau' + i" [(ngModel)]="a.niveau" min="1" max="5" step="1" required></label>
+            <button type="button" class="button secondary" (click)="profil.anforderungen.splice(i, 1)">Anforderung {{ i + 1 }} entfernen</button>
+          </div>
+        }
+        <div class="actions">
+          <button type="button" class="button secondary" (click)="profil.anforderungen.push({ kenntnisId: 0, niveau: 1 })" [disabled]="!kenntnisse().length || profil.anforderungen.length >= 200">Anforderung hinzufügen</button>
+          <button class="button primary" [disabled]="profilForm.invalid">Stellenprofil speichern</button><button type="button" class="button secondary" (click)="profilBearbeiten()">Profilformular leeren</button>
+        </div>
+      </fieldset>
+    </form>
+    <ul class="management-list">
+      @for (p of profile(); track p.id) { <li><div><strong>{{ p.name }}</strong><p class="mehrzeilig">{{ p.beschreibung }}</p><p class="mehrzeilig">{{ p.aufgaben }}</p>
+        @for (a of p.anforderungen; track a.kenntnisId) { <p>{{ kenntnisName(a.kenntnisId) }} · Soll {{ a.niveau }}</p> }
+      </div><div class="actions"><button class="button secondary" (click)="profilBearbeiten(p)" [disabled]="arbeitet()">{{ p.name }} bearbeiten</button><button class="button secondary" (click)="entfernen('profile', p)" [disabled]="arbeitet()">{{ p.name }} löschen</button></div></li> }
+      @empty { <li>Noch keine Stellenprofile vorhanden.</li> }
+    </ul>
+  </section>
+  <section aria-label="Planstellen"><h2>Planstellenverwaltung</h2>
+    <form #stellenForm="ngForm" (ngSubmit)="stelleSpeichern()"><fieldset [disabled]="arbeitet()"><legend>{{ stelle.id ? 'Planstelle bearbeiten' : 'Planstelle anlegen' }}</legend><div class="filter-grid">
+      <label class="field">Planstellenbezeichnung<input name="bezeichnung" [(ngModel)]="stelle.bezeichnung" required maxlength="120"></label>
+      <label class="field">Organisation der Planstelle<select name="organisation" [(ngModel)]="stelle.organisationId" required><option [ngValue]="0" disabled>Bitte wählen</option>@for (o of organisationen(); track o.id) { <option [ngValue]="o.id">{{ o.name }}</option> }</select></label>
+      <label class="field">Stellenprofil<select name="profil" [(ngModel)]="stelle.profilId" required><option [ngValue]="0" disabled>Bitte wählen</option>@for (p of profile(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select></label>
+      <label class="field">Stellenanteil (0,01–1,00)<input name="anteil" type="number" [(ngModel)]="stelle.anteil" min="0.01" max="1" step="0.01" required></label>
+      <label class="field">Besetzt durch<select name="besetzung" [(ngModel)]="stelle.mitarbeiterId"><option [ngValue]="null">Unbesetzt</option>@for (m of personen(); track m.id) { <option [ngValue]="m.id">{{ m.name }} · {{ m.personalnummer }}</option> }</select></label>
+    </div><div class="actions"><button class="button primary" [disabled]="stellenForm.invalid || !stelle.organisationId || !stelle.profilId">Planstelle speichern</button><button type="button" class="button secondary" (click)="stelleBearbeiten()">Planstellenformular leeren</button></div></fieldset></form>
+    <p>Die Stellenanteile einer Person dürfen zusammen höchstens 1,00 ergeben. Die Mitarbeiterabteilung wird durch eine Stellenbesetzung nicht geändert.</p>
+    <ul class="management-list">@for (s of stellen(); track s.id) { <li><div><strong>{{ s.bezeichnung }}</strong><p>{{ orgName(s.organisationId) }} · {{ profilName(s.profilId) }}</p><p>{{ personName(s.mitarbeiterId) }} · Anteil {{ s.anteil | number:'1.2-2' }}</p></div><div class="actions"><button class="button secondary" (click)="stelleBearbeiten(s)" [disabled]="arbeitet()">{{ s.bezeichnung }} bearbeiten</button><button class="button secondary" (click)="entfernen('planstellen', s)" [disabled]="arbeitet()">{{ s.bezeichnung }} löschen</button></div></li> } @empty { <li>Noch keine Planstellen vorhanden.</li> }</ul>
+  </section>
+</section>

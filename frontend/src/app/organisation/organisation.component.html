@@ -1,0 +1,61 @@
+﻿<section class="team-panel administration" aria-label="Administration">
+  <h1>Organisationseinheiten</h1>
+  <p>Struktur und Hierarchien Ihrer Organisation. Jeder gespeicherte Änderungsstand bleibt im Verlauf erhalten.</p>
+  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  <div class="filter-grid">
+    <label class="field">Darstellung<select [(ngModel)]="ansicht"><option value="liste">Liste</option><option value="baum">Baum</option><option value="organigramm">Organigramm</option></select></label>
+    <label class="field">Organisationsstand<select [(ngModel)]="revision" (ngModelChange)="standWechseln()" [disabled]="arbeitet()"><option [ngValue]="null">Aktueller Stand</option>
+      @for (r of revisionen(); track r.id) { <option [ngValue]="r.id">#{{ r.id }} · {{ r.zeitpunkt | date:'dd.MM.yyyy HH:mm:ss' }} · {{ r.beschreibung }} · {{ r.bearbeiter }}</option> }
+    </select></label>
+    <div class="actions"><button class="button secondary" (click)="revisionenBlaettern(-1)" [disabled]="revisionsseite === 0 || arbeitet()">Neuere Stände</button><button class="button secondary" (click)="revisionenBlaettern(1)" [disabled]="revisionen().length < 50 || arbeitet()">Ältere Stände</button></div>
+  </div>
+  <button class="button secondary" (click)="standWechseln()" [disabled]="arbeitet()">Organisationsstand aktualisieren</button>
+  @if (arbeitet()) { <p>Lade Organisationsstand …</p> }
+  @if (revision !== null && bereit()) { <p class="banner" role="status">Historischer Stand #{{ revision }} · schreibgeschützt. Die Historie beginnt mit der Einführung dieser Funktion.</p> }
+  @if (admin() && revision === null && bereit()) {
+    <form (ngSubmit)="orgSpeichern()" class="filter-grid">
+      <label class="field">Name der Organisationseinheit<input name="orgName" [(ngModel)]="orgName" required maxlength="120" [disabled]="arbeitet()"></label>
+      <label class="field">Übergeordnete Einheit<select name="parentId" [(ngModel)]="parentId" [disabled]="arbeitet()"><option [ngValue]="null">Oberste Ebene</option>
+        @for (o of organisationen(); track o.id) { @if (o.id !== organisation?.id) { <option [ngValue]="o.id">{{ o.name }}</option> } }
+      </select></label>
+      <button class="button primary" [disabled]="arbeitet()">{{ organisation ? 'Umbenennen / Zuordnung speichern' : 'Organisationseinheit anlegen' }}</button>
+      @if (organisation) { <button type="button" class="button secondary" (click)="orgBearbeiten()" [disabled]="arbeitet()">Abbrechen</button> }
+    </form>
+    <details class="organisation-hilfe"><summary>So verschieben Sie Organisationseinheiten</summary>
+      <p>Ziehen Sie eine Einheit auf die neue übergeordnete Einheit. An den Rändern scrollt die Ansicht automatisch weiter. Alternativ wählen Sie „Bearbeiten“ und ändern die übergeordnete Einheit im Formular.</p>
+    </details>
+    <div class="wurzel-ziel" (dragover)="erlauben($event)" (drop)="ablegen($event, null)">Hier ablegen: Oberste Ebene</div>
+  }
+  @if (ansicht === 'liste') {
+    <ul class="management-list">
+      @for (o of organisationen(); track o.id) {
+        <li [draggable]="bearbeitbar()" (dragstart)="ziehen($event, o)" (dragend)="zugEnde()" (dragover)="erlauben($event)" (drop)="ablegen($event, o.id)">
+          <span><strong>{{ o.name }}</strong> · {{ parentName(o) }}</span><ng-container *ngTemplateOutlet="aktionen; context: { $implicit: o }" />
+        </li>
+      } @empty { <li>Noch keine Organisationseinheiten vorhanden.</li> }
+    </ul>
+  } @else {
+    <div #struktur class="struktur" [class.organigramm]="ansicht === 'organigramm'" tabindex="0" aria-label="Organisationshierarchie">
+      <ng-container *ngTemplateOutlet="zweige; context: { $implicit: null }" />
+      @if (!organisationen().length) { <p>Noch keine Organisationseinheiten vorhanden.</p> }
+    </div>
+  }
+  <ng-template #zweige let-parent>
+    <ul class="zweige">
+      @for (o of kinder(parent); track o.id) {
+        <li><div class="org-knoten" [attr.data-org-id]="o.id" [draggable]="bearbeitbar()" (dragstart)="ziehen($event, o)" (dragend)="zugEnde()" (dragover)="erlauben($event)" (drop)="ablegen($event, o.id)">
+          <strong>{{ o.name }}</strong><ng-container *ngTemplateOutlet="aktionen; context: { $implicit: o }" />
+        </div>
+        @if (kinder(o.id).length) { <ng-container *ngTemplateOutlet="zweige; context: { $implicit: o.id }" /> }
+        </li>
+      }
+    </ul>
+  </ng-template>
+  <ng-template #aktionen let-o>
+    @if (admin() && revision === null && bereit()) { <div class="actions">
+      <button class="button secondary compact" [attr.aria-label]="o.name + ' umbenennen / bearbeiten'" (click)="orgBearbeiten(o)" [disabled]="arbeitet()">Bearbeiten</button>
+      <button class="button secondary compact" [attr.aria-label]="o.name + ' löschen'" (click)="orgLoeschen(o)" [disabled]="arbeitet()">Löschen</button>
+    </div> }
+  </ng-template>
+</section>

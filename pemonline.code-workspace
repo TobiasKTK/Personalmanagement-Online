@@ -1,0 +1,6 @@
+{
+    "folders": [{ "name": "Personalmanagement Online", "path": "." }],
+    "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic"
+    }
+}

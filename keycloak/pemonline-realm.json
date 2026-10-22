@@ -1,0 +1,65 @@
+{
+  "realm": "pemonline",
+  "enabled": true,
+  "displayName": "Personalmanagement Online",
+  "registrationAllowed": false,
+  "editUsernameAllowed": false,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["de", "en"],
+  "defaultLocale": "de",
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [{
+    "clientId": "pemonline",
+    "name": "Personalmanagement Online",
+    "enabled": true,
+    "protocol": "openid-connect",
+    "publicClient": true,
+    "standardFlowEnabled": true,
+    "directAccessGrantsEnabled": false,
+    "implicitFlowEnabled": false,
+    "serviceAccountsEnabled": false,
+    "redirectUris": ["http://127.0.0.1:8080/login/oauth2/code/keycloak"],
+    "webOrigins": [],
+    "attributes": {
+      "pkce.code.challenge.method": "S256",
+      "post.logout.redirect.uris": "http://127.0.0.1:8080/login?abgemeldet"
+    },
+    "defaultClientScopes": ["profile", "email"],
+    "protocolMappers": [{
+      "name": "pemonline-kontozuordnung",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-usermodel-attribute-mapper",
+      "consentRequired": false,
+      "config": {
+        "user.attribute": "pemonline_konto",
+        "claim.name": "pemonline_konto",
+        "jsonType.label": "String",
+        "id.token.claim": "true",
+        "access.token.claim": "false",
+        "userinfo.token.claim": "false",
+        "multivalued": "false"
+      }
+    }]
+  }],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [{
+      "providerId": "declarative-user-profile",
+      "config": {
+        "kc.user.profile.config": ["{\"unmanagedAttributePolicy\":\"DISABLED\",\"attributes\":[{\"name\":\"username\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{}}},{\"name\":\"email\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"validations\":{\"email\":{},\"length\":{\"max\":255}}},{\"name\":\"firstName\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"validations\":{\"length\":{\"max\":255}}},{\"name\":\"lastName\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"validations\":{\"length\":{\"max\":255}}},{\"name\":\"pemonline_konto\",\"displayName\":\"pemonline-Kontoname\",\"multivalued\":false,\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"validations\":{\"pattern\":{\"pattern\":\"[a-z0-9._-]{3,80}\"}}}],\"groups\":[]}"]
+      }
+    }]
+  },
+  "users": [{
+    "username": "admin",
+    "enabled": true,
+    "firstName": "PEM",
+    "lastName": "Administration",
+    "attributes": {"pemonline_konto": ["admin"]},
+    "credentials": [{"type": "password", "value": "${PEM_KEYCLOAK_APP_PASSWORD}", "temporary": true}]
+  }]
+}

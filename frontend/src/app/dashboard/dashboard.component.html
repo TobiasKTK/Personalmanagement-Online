@@ -1,0 +1,40 @@
+<section class="page-heading">
+  <div><p class="eyebrow">IHR ARBEITSTAG</p><h1>Startübersicht</h1><p class="subtitle">Team, Urlaub und nächste Schritte auf einen Blick.</p></div>
+  <button class="button secondary" [disabled]="laedt()" (click)="laden()">{{ laedt() ? 'Wird aktualisiert …' : 'Übersicht aktualisieren' }}</button>
+</section>
+@if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+@if (daten(); as d) {
+  <p class="dashboard-stand">Stand: {{ d.heute | date:'dd.MM.yyyy' }}</p>
+  <div class="dashboard-summary" [attr.aria-busy]="laedt()">
+    <article class="team-panel dashboard-card">
+      <h2>Heute abwesend</h2><strong class="dashboard-zahl">{{ d.abwesendGesamt }}</strong>
+      <p>Erfasste Abwesenheiten in Ihrem Team</p>
+      <ul>@for (p of d.abwesend; track p.id) { <li><span>{{ p.name }}</span><small>{{ arten[p.art] }}{{ p.halberTag ? ' · halber Tag' : '' }}</small></li> } @empty { <li class="dashboard-empty">Heute sind keine Abwesenheiten erfasst.</li> }</ul>
+      <a class="dashboard-link" routerLink="/kalender">Zum Teamkalender <span aria-hidden="true">→</span></a>
+    </article>
+    @if (d.offeneFreigaben !== null) {
+      <article class="team-panel dashboard-card">
+        <h2>Offene Freigaben</h2><strong class="dashboard-zahl">{{ d.offeneFreigaben }}</strong>
+        <p>{{ d.offeneFreigaben ? 'Diese Anträge warten auf Ihre Entscheidung.' : 'Aktuell sind keine Freigaben zu bearbeiten.' }}</p>
+        <p class="dashboard-help">Berücksichtigt Ihre Zuständigkeiten und aktiven Vertretungen.</p>
+        <a class="dashboard-link" routerLink="/urlaub">Freigaben bearbeiten <span aria-hidden="true">→</span></a>
+      </article>
+    }
+    <article class="team-panel dashboard-card">
+      <h2>Mein Urlaub</h2>
+      @if (d.urlaubskonto?.eingerichtet) {
+        <strong class="dashboard-zahl">{{ d.urlaubskonto!.rest }} <small>Tage</small></strong>
+        <p>{{ d.urlaubskonto!.verfuegbar }} Tage nach offenen Anträgen verfügbar.</p>
+      } @else { <p class="dashboard-empty">Für Ihr Konto ist dieses Jahr noch kein Urlaubskonto eingerichtet. Ihre Personalverwaltung hilft Ihnen weiter.</p> }
+      <p>{{ d.eigeneOffene }} eigene offene Anträge</p>
+      <a class="dashboard-link" routerLink="/urlaub" [queryParams]="{ eigene: true }">Meine Anträge <span aria-hidden="true">→</span></a>
+    </article>
+  </div>
+  <section class="team-panel dashboard-outlook" aria-labelledby="ausblick-titel">
+    <div class="panel-heading"><div><h2 id="ausblick-titel">Die nächsten 30 Tage</h2><p>Anstehende Veränderungen im Team · bis zu 10 Termine je Bereich</p></div></div>
+    <div class="outlook-grid">
+      <article><h3>Anstehende Eintritte</h3><ul>@for (p of d.eintritte; track p.id) { <li><time>{{ p.datum | date:'dd.MM.yyyy' }}</time><span>{{ p.name }}</span></li> } @empty { <li class="dashboard-empty">Keine anstehenden Eintritte.</li> }</ul></article>
+      <article><h3>Anstehende Austritte</h3><ul>@for (p of d.austritte; track p.id) { <li><time>{{ p.datum | date:'dd.MM.yyyy' }}</time><span>{{ p.name }}</span></li> } @empty { <li class="dashboard-empty">Keine anstehenden Austritte.</li> }</ul></article>
+    </div>
+  </section>
+} @else if (laedt()) { <p class="loading" role="status">Übersicht wird geladen …</p> }

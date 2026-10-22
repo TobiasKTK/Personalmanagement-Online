@@ -1,0 +1,10 @@
+@import url('/anmeldung/design-tokens.css');
+body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: #f3f5f8; color: #18283d; font: 1rem/1.6 system-ui, sans-serif; }
+main { box-sizing: border-box; width: min(32rem, calc(100% - 2rem)); margin: 2rem 0; padding: clamp(1.5rem, 5vw, 3rem); border: 1px solid #d9e0e9; border-radius: 1rem; background: white; box-shadow: 0 12px 40px #18283d0c; }
+.marke { color: #245eb6; font-weight: 750; letter-spacing: .04em; }
+h1 { font-size: clamp(1.5rem, 4vw, 1.9rem); line-height: 1.2; }
+.anmelden { display: block; margin: 1.5rem 0; padding: .8rem 1rem; border-radius: .5rem; background: #245eb6; color: white; text-align: center; font-weight: 650; text-decoration: none; }
+.anmelden:hover { background: #184b98; }
+.anmelden:focus-visible { outline: 3px solid #18283d; outline-offset: 4px; }
+.hilfe { color: #536174; font-size: .9rem; }
+[role=alert] { color: #9b2525; padding: .8rem; border: 1px solid #e5b6b6; border-radius: .4rem; }

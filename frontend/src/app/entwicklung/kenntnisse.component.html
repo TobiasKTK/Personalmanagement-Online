@@ -1,0 +1,38 @@
+<section class="team-panel administration" aria-label="Kenntnisverwaltung">
+  <h1>Kenntnisse und Schulungsbedarf</h1>
+  @if (fehler()) { <p role="alert" class="banner error">{{ fehler() }}</p> }
+  @if (meldung()) { <p role="status">{{ meldung() }}</p> }
+  <details open><summary>Kenntniskatalog verwalten</summary>
+    <form #katalogForm="ngForm" (ngSubmit)="kenntnisSpeichern()"><fieldset [disabled]="arbeitet()"><legend>{{ kenntnis.id ? 'Kenntnis bearbeiten' : 'Kenntnis anlegen' }}</legend><div class="filter-grid">
+      <label class="field">Kenntnisname<input name="name" [(ngModel)]="kenntnis.name" required maxlength="120"></label>
+      <label class="field">Kategorie<select name="kategorie" [(ngModel)]="kenntnis.kategorie">@for (k of kategorien; track k.wert) { <option [value]="k.wert">{{ k.name }}</option> }</select></label>
+    </div><div class="actions"><button class="button primary" [disabled]="katalogForm.invalid">Kenntnis speichern</button><button type="button" class="button secondary" (click)="kenntnisBearbeiten()">Katalogformular leeren</button></div></fieldset></form>
+    <ul class="management-list">@for (k of katalog(); track k.id) { <li><span><strong>{{ k.name }}</strong> · {{ kategorieName(k.kategorie) }}</span><div class="actions"><button class="button secondary" (click)="kenntnisBearbeiten(k)" [disabled]="arbeitet()">{{ k.name }} bearbeiten</button><button class="button secondary" (click)="entfernen('kenntnisse', k)" [disabled]="arbeitet()">{{ k.name }} löschen</button></div></li> } @empty { <li>Noch keine Kenntnisse vorhanden.</li> }</ul>
+  </details>
+  <h2>Kenntnisse einer Person</h2>
+  <label class="field">Person für Kenntnisse<select [(ngModel)]="personId" (ngModelChange)="personWechseln()" [disabled]="arbeitet()"><option [ngValue]="0">Bitte wählen</option>@for (p of personen(); track p.id) { <option [ngValue]="p.id">{{ p.name }} · {{ p.personalnummer }}</option> }</select></label>
+  @if (personId) {
+    <p>Niveau: 1 Grundlagen · 2 Basis · 3 selbstständig · 4 fortgeschritten · 5 Experte. Teilnahme- und Abschlussnachweise können mit Niveau 1 erfasst werden. Nicht erfasst bedeutet unbekannt.</p>
+    <form #nachweisForm="ngForm" (ngSubmit)="nachweisSpeichern()"><fieldset [disabled]="arbeitet()"><legend>{{ nachweis.id ? 'Nachweis bearbeiten' : 'Kenntnis erfassen' }}</legend><div class="filter-grid">
+      <label class="field">Nachgewiesene Kenntnis<select name="kenntnis" [(ngModel)]="nachweis.kenntnisId" [disabled]="!!nachweis.id" required><option [ngValue]="0" disabled>Bitte wählen</option>@for (k of katalog(); track k.id) { <option [ngValue]="k.id">{{ k.name }} · {{ kategorieName(k.kategorie) }}</option> }</select></label>
+      <label class="field">Ist-Niveau<input name="niveau" type="number" [(ngModel)]="nachweis.niveau" min="1" max="5" step="1" required></label>
+      <label class="field">Erworben am<input name="erworben" type="date" [(ngModel)]="nachweis.erworbenAm" required></label>
+      <label class="field">Gültig bis (optional)<input name="gueltig" type="date" [(ngModel)]="nachweis.gueltigBis"></label>
+      <label class="field">Nachweis / Zertifikatsnummer<textarea name="nachweis" [(ngModel)]="nachweis.nachweis" maxlength="1000" rows="2"></textarea></label>
+    </div><div class="actions"><button class="button primary" [disabled]="nachweisForm.invalid || !nachweis.kenntnisId">Kenntnisnachweis speichern</button><button type="button" class="button secondary" (click)="nachweisBearbeiten()">Nachweisformular leeren</button></div></fieldset></form>
+    <ul class="management-list">@for (n of nachweise(); track n.id) { <li><div><strong>{{ kenntnisName(n.kenntnisId) }}</strong><p>Niveau {{ n.niveau }} · erworben {{ n.erworbenAm }} · gültig bis {{ n.gueltigBis || 'unbefristet' }}</p><p>{{ n.nachweis }}</p></div><div class="actions"><button class="button secondary" (click)="nachweisBearbeiten(n)" [disabled]="arbeitet()">{{ kenntnisName(n.kenntnisId) }} Nachweis bearbeiten</button><button class="button secondary" (click)="entfernen('nachweise', n)" [disabled]="arbeitet()">{{ kenntnisName(n.kenntnisId) }} Nachweis löschen</button></div></li> } @empty { <li>Für diese Person sind noch keine Kenntnisse erfasst.</li> }</ul>
+    <section aria-label="Soll-Ist-Abgleich"><h2>Soll-Ist-Abgleich</h2>
+      <p>Verglichen werden die aktuellen Stellenanforderungen mit den zum Stichtag gültigen Nachweisen. Fehlende oder abgelaufene Nachweise zählen als Ist 0.</p>
+      <form #abgleichForm="ngForm" (ngSubmit)="abgleichen()" class="filter-grid">
+        <label class="field">Vergleichsprofil<select name="profil" [(ngModel)]="profilId" (ngModelChange)="abgeglichen.set(false)" [disabled]="arbeitet()"><option [ngValue]="null">Alle besetzten Planstellen dieser Person</option>@for (p of profile(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select></label>
+        <label class="field">Stichtag für Nachweise<input name="stichtag" type="date" [(ngModel)]="stichtag" (ngModelChange)="abgeglichen.set(false)" [disabled]="arbeitet()" required></label>
+        <button class="button primary" [disabled]="arbeitet() || abgleichForm.invalid">Schulungsbedarf ermitteln</button>
+      </form>
+      @if (abgeglichen()) {
+        @if (ergebnis().length) { <p role="status">{{ bedarf() }} von {{ ergebnis().length }} Anforderungen mit Schulungs- oder Nachweisbedarf.</p>
+          <div class="tabelle"><table><thead><tr><th>Kenntnis / Anforderung</th><th>Kategorie</th><th>Soll</th><th>Ist</th><th>Fehlende Stufen</th><th>Ergebnis</th></tr></thead><tbody>@for (a of ergebnis(); track a.kenntnisId) { <tr [class.bedarf]="a.differenz > 0"><td>{{ a.name }}</td><td>{{ kategorieName(a.kategorie) }}</td><td>{{ a.soll }}</td><td>{{ a.ist }}</td><td>{{ a.differenz }}</td><td>{{ a.grund }}</td></tr> }</tbody></table></div>
+        } @else { <p role="status">Keine Anforderungen vorhanden. Bitte eine Planstelle zuordnen oder ein Stellenprofil mit Anforderungen auswählen.</p> }
+      }
+    </section>
+  }
+</section>
