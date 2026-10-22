@@ -578,6 +578,57 @@ Weitere Aktionen: `GEAENDERT`, `GELOESCHT`. Es werden keine Namen, Wochenstunden
 
 Weitere Einstellungen: `PORT`, `MITARBEITER_DB_URL`, `MITARBEITER_DB_USER`, `MITARBEITER_DB_PASSWORD`.
 
+## Eingesetzte Komponenten und Versionen
+
+Stand: **22.10.2026**, Projektversion **1.0.0**. Die Übersicht enthält die wesentlichen Komponenten aus der Projektkonfiguration und den vorhandenen Build-Artefakten. Lokal ermittelte Werkzeugversionen sind entsprechend gekennzeichnet.
+
+### Backend und Anmeldung
+
+| Komponente | Version | Aufgabe |
+| --- | --- | --- |
+| Java | 25 | Programmiersprache und Laufzeit; lokal installiert: Eclipse Temurin 25.0.4.1 |
+| Spring Boot | 4.1.1 | Start und Konfiguration der Anwendung |
+| Spring Framework / Spring MVC | 7.0.9 | HTTP-API und Verarbeitung von Anfragen |
+| Spring Security | 7.1.1 | Anmeldung und Zugriffsrechte |
+| Keycloak | 26.8.1 | Zentraler Anmeldedienst über OpenID Connect |
+| H2 | 2.4.240 | Eingebettete Datenbank |
+| Flyway | 12.4.0 | Verwaltung von Datenbankmigrationen |
+| HikariCP | 7.0.2 | Verwaltung der Datenbankverbindungen |
+| Apache Tomcat | 11.0.24 | Eingebetteter Webserver |
+| Hibernate Validator | 9.1.3.Final | Prüfung von Eingaben, etwa Pflichtfeldern |
+| Jackson | 3.1.5 | Umwandlung zwischen Java-Objekten und JSON |
+| Logback | 1.5.38 | Protokollierung |
+
+### Frontend
+
+| Komponente | Version | Aufgabe |
+| --- | --- | --- |
+| Angular | 22.2.2 | Benutzeroberfläche, Formulare und Navigation |
+| Angular CLI / Build / Compiler CLI | 22.2.2 | Entwicklungsserver und Erstellung der Oberfläche |
+| TypeScript | 6.0.3 | Programmiersprache des Frontends |
+| RxJS | 7.8.2 | Verarbeitung asynchroner Abläufe, etwa HTTP-Anfragen |
+| tslib | 2.8.1 | Laufzeithilfen für kompilierten TypeScript-Code |
+
+### Build, Tests und lokale Ausführung
+
+| Werkzeug | Version | Aufgabe |
+| --- | --- | --- |
+| Maven | 3.10.0 | Java-Build und Verwaltung der Abhängigkeiten |
+| Maven Wrapper | 3.3.4 | Bereitstellung der festgelegten Maven-Version |
+| Node.js | 24.21.0 | Ausführung der Frontend-Werkzeuge |
+| npm | 11.19.0 (lokal ermittelt) | Verwaltung der Frontend-Pakete |
+| frontend-maven-plugin | 2.0.2 | Einbindung des Frontend-Builds in Maven |
+| Spring Boot Maven Plugin | 4.1.1 | Erstellung der ausführbaren JAR |
+| Playwright | 1.64.0 | Automatisierte Browsertests |
+| JUnit Jupiter | 6.0.3 | Java-Tests |
+| Mockito | 5.23.0 | Nachbildung von Abhängigkeiten in Tests |
+| AssertJ | 3.27.7 | Prüfung erwarteter Testergebnisse |
+| Docker / Docker Compose | Nicht im Projekt festgelegt | Start von Keycloak; Version abhängig von der lokalen Installation |
+
+Viele Backend-Versionen werden zentral durch Spring Boot vorgegeben. Bei TypeScript steht in der `package.json` der Versionsbereich `~6.0.0`; die `package-lock.json` legt tatsächlich **6.0.3** fest. Java **25** ist die Projektvorgabe; die oben genannte Temurin-Version beschreibt die zum Erfassungszeitpunkt lokal installierte Laufzeit.
+
+Quellen: [pom.xml](pom.xml), [package.json](frontend/package.json), [package-lock.json](frontend/package-lock.json), [compose.yaml](compose.yaml), [Maven-Wrapper-Konfiguration](.mvn/wrapper/maven-wrapper.properties) sowie die vorhandenen Java-Build-Artefakte und lokal ermittelten Werkzeugversionen. Bei Abhängigkeitsupdates diese Übersicht mit aktualisieren.
+
 ## Technische Grundlagen
 
 - [Keycloak: Container und Realm-Import](https://www.keycloak.org/server/containers)
