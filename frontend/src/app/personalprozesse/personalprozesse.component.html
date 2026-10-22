@@ -9,10 +9,11 @@
     <form (ngSubmit)="suchen()"><fieldset [disabled]="arbeitet()"><div class="suche-zeile">
       <label class="field">Mitarbeiter suchen<input name="suche" [(ngModel)]="suche" maxlength="100" placeholder="Name oder Personalnummer"></label>
       <button class="button secondary">Mitarbeiter suchen</button></div></fieldset></form>
+    <p id="mitarbeiter-suchergebnis" class="hinweis" aria-live="polite" aria-atomic="true">{{ suchErgebnis() }}</p>
     <form #startForm="ngForm" (ngSubmit)="starten()"><fieldset [disabled]="arbeitet()"><div class="prozess-grid">
       <label class="field">Vorlage für neuen Vorgang<select name="startVorlage" [(ngModel)]="start.vorlageId" required>
         @for (v of vorlagen(); track v.id) { <option [ngValue]="v.id">{{ typText(v.typ) }} · {{ v.titel }}</option> }</select></label>
-      <label class="field">Mitarbeiter für Vorgang<select name="startPerson" [(ngModel)]="start.mitarbeiterId" required><option [ngValue]="null">Bitte zuerst suchen und auswählen</option>
+      <label class="field">Mitarbeiter für Vorgang<select name="startPerson" [(ngModel)]="start.mitarbeiterId" aria-describedby="mitarbeiter-suchergebnis" required><option [ngValue]="null">{{ mitarbeiterPlatzhalter() }}</option>
         @for (m of mitarbeiter(); track m.id) { <option [ngValue]="m.id">{{ m.name }} · {{ m.personalnummer }}</option> }</select></label>
       <label class="field">Eintritts- oder Austrittsdatum<input name="bezugsdatum" type="date" [(ngModel)]="start.bezugsdatum" min="0001-01-01" max="9999-12-31" required></label>
       <label class="field">Verantwortlich für neue Aufgaben<select name="startKonto" [(ngModel)]="start.verantwortlich" required><option value="">Bitte auswählen</option>

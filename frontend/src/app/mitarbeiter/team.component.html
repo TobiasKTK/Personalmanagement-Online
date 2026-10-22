@@ -153,18 +153,8 @@
                 <td>{{ zahl(person.wochenstunden) }} Std.@if (!person.historieBekannt) { <small title="Für diesen Stichtag ist kein historischer Stand bekannt. Angezeigt wird der erste bekannte Stand."> · Stand unbekannt</small> }</td>
                 <td>
                   <div class="actions">
-                    @if (darfSchreiben()) { <button class="button secondary compact" [attr.data-personaldaten-id]="person.id" [attr.aria-label]="person.name + ' Personaldaten'" (click)="personaldaten.set(person)">Personaldaten</button> }
-                    <button class="button secondary compact" [attr.aria-label]="person.name + ' Details'" (click)="details.set(person)">Details</button>
-                    <button [hidden]="!darfSchreiben()"
-                      class="icon-button"
-                      [attr.aria-label]="person.name + ' bearbeiten'"
-                      title="Bearbeiten"
-                      (click)="oeffnen(person)"
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5" />
-                      </svg></button
-                    ><button
+                    <button class="button secondary compact" [attr.data-profil-id]="person.id" [attr.aria-label]="person.name + ' Mitarbeiter öffnen'" (click)="profilOeffnen(person)">Mitarbeiter öffnen</button>
+                    <button
                       class="icon-button delete" [hidden]="!darfSchreiben()"
                       [attr.aria-label]="person.name + ' löschen'"
                       title="Löschen"
@@ -238,14 +228,15 @@
     [person]="bearbeitet()"
     [organisationen]="organisationen()"
     (gespeichert)="gespeichert($event)"
+    (ergaenzen)="anlageFortsetzen($event)"
     (geschlossen)="editorGeoeffnet.set(false)"
   />
 }
 @if (details(); as person) {
-  <app-mitarbeiter-details [person]="person" [darfSchreiben]="darfSchreiben()" (geschlossen)="details.set(null); laden()" />
+  <app-mitarbeiter-details [person]="person" [darfSchreiben]="darfSchreiben()" (stammdatenBearbeiten)="oeffnen(person)" (personalakteOeffnen)="personaldaten.set(person)" (geschlossen)="profilSchliessen(person.id)" />
 }
 @if (personaldaten(); as person) {
-  <app-personaldaten [person]="person" [fristBereich]="fristZiel().bereich" [fristDatensatz]="fristZiel().datensatz" (geschlossen)="personaldatenSchliessen(person.id)" />
+  <app-personaldaten [person]="person" [neuanlage]="neuanlage() === person.id" [fristBereich]="fristZiel().bereich" [fristDatensatz]="fristZiel().datensatz" (geschlossen)="personaldatenSchliessen(person.id)" />
 }
 <dialog
   #loeschdialog

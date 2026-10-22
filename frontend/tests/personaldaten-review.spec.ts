@@ -5,8 +5,9 @@ async function oeffnen(page: Page, request: APIRequestContext, name: string) {
   const r = await request.post('/api/mitarbeiter', { data: { vorname: 'Review', nachname: name, wochenstunden: 32, eintrittsdatum: '2020-01-01', austrittsdatum: '2025-12-31' } });
   expect(r.status()).toBe(201); const person = await r.json();
   await page.goto('/mitarbeiter?suche=' + encodeURIComponent(name));
-  await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+  await page.getByRole('button', { name: 'Personalakte öffnen', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
   await expect(dialog.getByLabel('Kontoinhaber', { exact: true })).toBeVisible();
   return { person, dialog, pfad: `/api/mitarbeiter/${person.id}/personaldaten` };
 }

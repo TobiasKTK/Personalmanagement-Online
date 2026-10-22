@@ -1,9 +1,12 @@
 <dialog #dialog class="personal-dialog" aria-labelledby="personaldaten-titel" (cancel)="schliessen($event)" (keydown.escape)="schliessen($event)">
   <div class="dialog-heading">
     <div><h2 id="personaldaten-titel">Personaldaten · {{ person().name }}</h2><p>Personal-Nr. {{ person().personalnummer }} · {{ akte()?.person?.organisationseinheit || 'Keine Organisationseinheit' }}</p></div>
-    <button class="button secondary" autofocus (click)="schliessen()" [disabled]="arbeitet() || kindArbeitet()">Schließen</button>
+    <button class="button secondary" autofocus (click)="schliessen()" [disabled]="arbeitet() || kindArbeitet()">{{ neuanlage() ? 'Weiter zum Mitarbeiterprofil' : 'Schließen' }}</button>
   </div>
   <div class="akten-inhalt">
+    @if (neuanlage()) {
+      <div class="banner info"><strong>2. Weitere Personaldaten ergänzen</strong><p>Der Mitarbeiter ist bereits angelegt. Ergänzen Sie die gewünschten Angaben und speichern Sie diese im jeweiligen Bereich. Über „Weiter zum Mitarbeiterprofil“ erreichen Sie anschließend Urlaubskonto, Abwesenheiten und weitere Details. Zusätzliche Angaben können Sie auch später erfassen.</p></div>
+    }
     <nav class="akten-navigation" aria-label="Bereiche der Personaldaten">@for (b of bereiche; track b) { <button class="button compact" [class.primary]="bereich === b" [class.secondary]="bereich !== b" [attr.aria-pressed]="bereich === b" (click)="bereichWaehlen(b)" [disabled]="arbeitet() || kindArbeitet()">{{ b }}</button> }</nav>
     @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
     @if (meldung()) { <p class="banner success" role="status">{{ meldung() }}</p> }

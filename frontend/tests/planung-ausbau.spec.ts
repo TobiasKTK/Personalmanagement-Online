@@ -26,7 +26,7 @@ test('Planung pflegen, Stellvertretung benachrichtigen, Warnung bestätigen und 
   await page.getByLabel('Mindestens verfügbare Personen').fill('1'); await page.getByRole('button', { name: 'Besetzungsregel speichern' }).click();
   await expect(page.getByText('Besetzungsregel gespeichert.', { exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('planung-desktop.png'), fullPage: true });
-  await page.goto('/mitarbeiter?suche=Lena%20Ausbau'); await page.getByRole('button', { name: 'Lena Ausbau Details', exact: true }).click();
+  await page.goto('/mitarbeiter?suche=Lena%20Ausbau'); await page.getByRole('button', { name: 'Lena Ausbau Mitarbeiter öffnen', exact: true }).click();
   const dialog = page.locator('#mitarbeiter-details'); await dialog.locator('summary').filter({ hasText: 'Urlaubskonto und Arbeitstage' }).click();
   const konto = dialog.getByRole('region', { name: 'Urlaubskonto', exact: true });
   await konto.getByLabel('Urlaubsjahr').fill('2030'); await konto.getByRole('button', { name: 'Urlaubskonto laden' }).click();

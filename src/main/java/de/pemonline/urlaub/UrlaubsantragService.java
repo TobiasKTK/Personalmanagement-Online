@@ -18,7 +18,7 @@ import static de.pemonline.fachlich.FachlicherFehler.Art.*;
 @Service
 @Validated
 @Transactional(readOnly = true)
-@PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN')")
+@PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN', 'MITARBEITER', 'TEAMLEITUNG')")
 public class UrlaubsantragService {
     private final UrlaubsantragRepository repository;
     private final MitarbeiterRepository mitarbeiter;
@@ -60,9 +60,13 @@ public class UrlaubsantragService {
         return false;
     }
     public record Profil(UrlaubZuordnung zuordnung) {}
+    private static boolean hatFreigaberolle() {
+        return hatPersonalrechte() || SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_TEAMLEITUNG"));
+    }
     public Profil profil() { return new Profil(repository.eigenesProfil(angemeldeterKontoname()).orElse(null)); }
     public record Detail(Urlaubsantrag antrag, boolean freigabe) {}
-    @PreAuthorize("hasAnyRole('PERSONAL', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('PERSONAL', 'ADMIN', 'TEAMLEITUNG')")
     public de.pemonline.planung.BesetzungService.Vorschau besetzung(@Positive long id) {
         var detail = einzelner(id);
         if (!detail.freigabe()) {
@@ -76,7 +80,7 @@ public class UrlaubsantragService {
     public Detail einzelner(@Positive long id) {
         var antrag = repository.finden(id).orElseThrow(() -> new FachlicherFehler(NICHT_GEFUNDEN, "Antrag nicht gefunden."));
         boolean eigen = repository.eigenesProfil(angemeldeterKontoname()).filter(profil -> profil.mitarbeiterId() == antrag.mitarbeiterId()).isPresent();
-        boolean freigabe = hatPersonalrechte() && repository.genehmiger(antrag.mitarbeiterId(), antrag.antragsteller()).contains(angemeldeterKontoname());
+        boolean freigabe = hatFreigaberolle() && repository.genehmiger(antrag.mitarbeiterId(), antrag.antragsteller()).contains(angemeldeterKontoname());
         if (!eigen && !freigabe) {
             throw new AccessDeniedException("Für diesen Antrag fehlt die Berechtigung.");
         }
@@ -97,8 +101,9 @@ public class UrlaubsantragService {
         if (eingabe.konto() != null && !repository.aktivesKonto(eingabe.konto(), false)) {
             throw new FachlicherFehler(UNGUELTIG, "Bitte ein aktives Mitarbeiterkonto wählen.");
         }
-        if (eingabe.modus().equals("ZUGEORDNET") && (eingabe.genehmiger() == null || !repository.aktivesKonto(eingabe.genehmiger(), true)))
-            throw new FachlicherFehler(UNGUELTIG, "Bitte einen aktiven Genehmiger mit Personal- oder Administrationsrechten wählen.");
+        if (eingabe.modus().equals("ZUGEORDNET") && (eingabe.genehmiger() == null || (!repository.aktivesKonto(eingabe.genehmiger(), true)
+                && !repository.teamGenehmiger(eingabe.genehmiger(), mitarbeiterId))))
+            throw new FachlicherFehler(UNGUELTIG, "Bitte eine zuständige aktive Teamleitung oder ein Konto mit Personal- oder Administrationsrechten wählen.");
         if (eingabe.modus().equals("ALLE") && eingabe.genehmiger() != null) {
             throw new FachlicherFehler(UNGUELTIG, "Im Modus Alle bleibt der einzelne Genehmiger leer.");
         }
@@ -113,10 +118,10 @@ public class UrlaubsantragService {
         return nachher;
     }
     public UrlaubsantragRepository.Seite liste(boolean freigaben, @Pattern(regexp = "ALLE|BEANTRAGT|GENEHMIGT|ABGELEHNT|ZURUECKGEZOGEN|STORNIERT") String status, @Min(0) int seite) {
-        if (freigaben && !hatPersonalrechte()) {
+        if (freigaben && !hatFreigaberolle()) {
             throw new AccessDeniedException("Keine Freigaberechte.");
         }
-        return repository.liste(angemeldeterKontoname(), hatPersonalrechte(), freigaben, status, seite);
+        return repository.liste(angemeldeterKontoname(), hatFreigaberolle(), freigaben, status, seite);
     }
     @Transactional
     public Urlaubsantrag beantragen(@NotNull @Valid Urlaubsantrag.Eingabe eingabe) {
@@ -150,7 +155,7 @@ public class UrlaubsantragService {
         var zuordnung = repository.zuordnung(antrag.mitarbeiterId())
                 .orElseThrow(() -> new AccessDeniedException("Keine Zuordnung."));
         boolean eigenerAntrag = angemeldeterKontoname().equals(zuordnung.konto());
-        boolean berechtigterGenehmiger = hatPersonalrechte()
+        boolean berechtigterGenehmiger = hatFreigaberolle()
                 && repository.genehmiger(antrag.mitarbeiterId(), antrag.antragsteller()).contains(angemeldeterKontoname());
         entscheidungPruefen(antrag, entscheidung, eigenerAntrag, berechtigterGenehmiger);
 

@@ -17,8 +17,9 @@ test('Dokumentbedarf, neue PDF-Version und alte Downloads sind in der Personalak
   expect(erstellt.status()).toBe(201); const person = await erstellt.json();
   const fehler: string[] = []; page.on('pageerror', e => fehler.push(e.message));
   await page.goto('/mitarbeiter?suche=Dokumente%20E2E');
-  await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+  await page.getByRole('button', { name: 'Personalakte öffnen', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
   await dialog.getByRole('button', { name: 'Dokumente', exact: true }).click();
   const bedarf = dialog.getByRole('group', { name: 'Benötigte Unterlagen' });
   await expect(bedarf.getByLabel('Zeugnis erforderlich')).toBeEnabled();
@@ -66,8 +67,9 @@ test('Ein Versionskonflikt erhält die PDF-Auswahl und lässt sich durch erneute
   const multipart = { titel: 'Vertrag', art: 'VERTRAG', quelle: 'MANUELL', monat: '', datei: { name: 'vertrag.pdf', mimeType: 'application/pdf', buffer: pdf('Vertrag') } };
   const importiert = await request.post(pfad, { multipart }); expect(importiert.status()).toBe(201); const dokument = await importiert.json();
   await page.goto('/mitarbeiter?suche=Konflikt');
-  await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+  await page.getByRole('button', { name: 'Personalakte öffnen', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
   await dialog.getByRole('button', { name: 'Dokumente', exact: true }).click();
   await dialog.getByRole('button', { name: 'Version hinzufügen' }).click();
   const nebenlaeufig = await request.post(`${pfad}/${dokument.id}/versionen`, { multipart: { ...multipart, dokumentVersion: '1' } });

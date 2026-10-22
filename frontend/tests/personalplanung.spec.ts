@@ -58,7 +58,7 @@ test('Urlaubskonto, Zuordnung, halber Antrag, Freigabe, Kalender und historische
     expect((await request.post('/api/konten', { data: { name, rolle, aktiv: true, passwort: 'Isolierte-Planungstests-2030!' } })).status()).toBe(201);
   }
   await page.goto('/mitarbeiter?suche=Planung');
-  await page.getByRole('button', { name: 'Mara Planung Details' }).click();
+  await page.getByRole('button', { name: 'Mara Planung Mitarbeiter öffnen' }).click();
   const dialog = page.locator('#mitarbeiter-details');
   await dialog.locator('summary').filter({ hasText: 'Urlaubskonto und Arbeitstage' }).click();
   const konto = dialog.getByRole('region', { name: 'Urlaubskonto', exact: true });

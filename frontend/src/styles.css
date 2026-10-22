@@ -145,6 +145,11 @@ dialog::backdrop { background: rgb(15 23 42 / 45%); }
 #editor { width: min(880px, calc(100% - 32px)); }
 #ungespeichert-dialog .button { flex: 1 1 auto; }
 .details-dialog { width: min(1000px, calc(100vw - 32px)); }
+.profil-heading { align-items: flex-start; flex-wrap: wrap; }
+.profil-heading > div { min-width: 0; flex: 1 1 240px; overflow-wrap: anywhere; }
+.profil-heading p { margin-block: var(--space-2) 0; color: var(--muted); }
+.profil-aktionen { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-block: var(--space-4); }
+.details-inhalt > section { overflow-wrap: anywhere; }
 .details-inhalt { padding: 0 var(--space-5) var(--space-5); }
 .details-inhalt h3 { margin: var(--space-5) 0 var(--space-3); }
 .details-inhalt > details { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); margin: var(--space-3) 0; }

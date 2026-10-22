@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiFehler, mitFehlern } from '../shared/api-fehler';
 import { KontenApiService } from './konten-api.service';
+import { TeamzuordnungComponent } from './teamzuordnung.component';
 import { Konto } from '../shared/model';
 import { SitzungService } from '../sitzung/sitzung.service';
 
@@ -13,7 +14,7 @@ interface Firmenzugang { mandantenspeicherId: number; firma: string; rolle: stri
 interface Benutzerkonto { name: string; aktiv: boolean; systemverwaltung: boolean; zuordnungen: Firmenzugang[]; }
 
 @Component({
-  selector: 'app-konten', standalone: true, imports: [FormsModule, RouterLink],
+  selector: 'app-konten', standalone: true, imports: [FormsModule, RouterLink, TeamzuordnungComponent],
   templateUrl: './konten.component.html',
 })
 export class KontenComponent implements OnInit {
@@ -34,6 +35,7 @@ export class KontenComponent implements OnInit {
   globalesKonto: (Omit<Benutzerkonto, 'zuordnungen'> & { passwort: string }) | null = null;
   zugang = { mandantenspeicherId: null as number | null, rolle: 'LESEN', aktiv: true };
 
+  rollenname(rolle: string): string { return ({ MITARBEITER: 'Mitarbeiter', TEAMLEITUNG: 'Teamleitung', LESEN: 'Lesen', PERSONAL: 'Personalverwaltung', ADMIN: 'Administration' } as Record<string, string>)[rolle] ?? rolle; }
   ngOnInit(): void { void this.ausfuehren(async () => {}, ''); }
   private async laden(): Promise<void> {
     if (this.session.sitzung()?.systemverwaltung) {

@@ -35,7 +35,7 @@ public class UrlaubskontoService {
         this.verlauf = verlauf;
         this.clock = clock;
     }
-    @PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN', 'MITARBEITER', 'TEAMLEITUNG')")
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Urlaubskonto konto(@Positive long mitarbeiterId, @Min(1) @Max(9999) int jahr) {
         if (!UrlaubsantragService.hatPersonalrechte() && antraege.eigenesProfil(UrlaubsantragService.angemeldeterKontoname())
@@ -139,7 +139,7 @@ public class UrlaubskontoService {
     }
     // Aufrufer hält die Mitarbeitersperre: Buchung und Kontoprüfung bilden eine Transaktion.
     @Transactional(propagation = Propagation.MANDATORY)
-    @PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN', 'MITARBEITER', 'TEAMLEITUNG')")
     public void pruefen(long mitarbeiterId) {
         for (int jahr : repository.jahre(mitarbeiterId)) {
             if (berechnen(mitarbeiterId, jahr).verfuegbar() < 0) {

@@ -27,7 +27,7 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 @Validated
 @Transactional(readOnly=true)
-@PreAuthorize("hasAnyRole('LESEN','PERSONAL','ADMIN')")
+@PreAuthorize("hasAnyRole('LESEN','PERSONAL','ADMIN','MITARBEITER','TEAMLEITUNG')")
 public class SelfServiceService {
     private final JdbcClient jdbc;
     private final MitarbeiterRepository mitarbeiter;

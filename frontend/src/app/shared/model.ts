@@ -49,7 +49,7 @@ export interface Statistik {
 }
 
 export interface Organisation { id: number; name: string; version: number; parentId?: number | null; }
-export interface Sitzung { name: string; rolle: 'LESEN' | 'PERSONAL' | 'ADMIN' | null; mandantenspeicherId: number | null; firma: string; systemverwaltung: boolean; keycloak: boolean; }
+export interface Sitzung { name: string; rolle: 'LESEN' | 'PERSONAL' | 'ADMIN' | 'MITARBEITER' | 'TEAMLEITUNG' | null; mandantenspeicherId: number | null; firma: string; systemverwaltung: boolean; keycloak: boolean; }
 export interface Konto { name: string; rolle: NonNullable<Sitzung['rolle']>; aktiv: boolean; }
 export interface Abwesenheit { id: number; mitarbeiterId: number; art: string; beginn: string; ende: string; version: number; halberTag: boolean; }
 export interface Verlauf { id: number; zeitpunkt: string; bearbeiter: string; aktion: string; vorher: string | null; nachher: string | null; }

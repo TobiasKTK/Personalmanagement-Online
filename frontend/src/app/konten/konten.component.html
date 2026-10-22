@@ -9,7 +9,7 @@
   @if (firmenadmin()) {
   <h2>{{ kontoNeu ? 'Benutzerkonto anlegen' : 'Firmenzugang bearbeiten' }}</h2>
   <p>Für die aktuelle Firma <strong>{{ session.sitzung()?.firma }}</strong>. Kontonamen sind über alle Firmen eindeutig.</p>
-  <p>Lesen: Mitarbeiter und Abwesenheiten ansehen. Personalverwaltung: zusätzlich bearbeiten. Administration: zusätzlich Organisationseinheiten und Firmenzugänge verwalten.</p>
+  <p>Mitarbeiter: eigene Daten und Anträge. Teamleitung: zusätzlich zugeordnete Teams und Urlaubsfreigaben. Lesen: Mitarbeiter und Abwesenheiten ansehen. Personalverwaltung: zusätzlich bearbeiten. Administration: zusätzlich Organisationseinheiten und Firmenzugänge verwalten.</p>
   <form #kontoFormular="ngForm" (ngSubmit)="kontoSpeichern(kontoFormular)" class="filter-grid konto-formular">
     <div class="field">
       <label for="kontoname">Kontoname</label>
@@ -25,7 +25,7 @@
       <span class="field-error" id="kontopasswort-fehler" aria-live="polite">{{ kontoFeldFehler(kontopasswort) }}</span>
     </div>
     }
-    <label class="field">Rolle<select name="rolle" [(ngModel)]="konto.rolle" [disabled]="arbeitet()"><option value="LESEN">Lesen</option><option value="PERSONAL">Personalverwaltung</option><option value="ADMIN">Administration</option></select></label>
+    <label class="field">Rolle<select name="rolle" [(ngModel)]="konto.rolle" [disabled]="arbeitet()"><option value="MITARBEITER">Mitarbeiter</option><option value="TEAMLEITUNG">Teamleitung</option><option value="LESEN">Lesen</option><option value="PERSONAL">Personalverwaltung</option><option value="ADMIN">Administration</option></select></label>
     <label><input type="checkbox" name="aktiv" [(ngModel)]="konto.aktiv" [disabled]="arbeitet()"> Zugang zur aktuellen Firma aktiv</label>
     <button class="button primary" [disabled]="arbeitet()">{{ kontoNeu ? 'Konto anlegen' : 'Konto speichern' }}</button>
     @if (!kontoNeu) { <button type="button" class="button secondary" (click)="kontoBearbeiten(undefined, kontoFormular)" [disabled]="arbeitet()">Abbrechen</button> }
@@ -43,6 +43,7 @@
   } @else {
     <p>Zum Anlegen eines Benutzerkontos <a routerLink="/mandanten">eine Firma wählen</a>, in der du Administrationsrechte hast. Bestehende Konten und Firmenzugänge kannst du hier verwalten.</p>
   }
+  @if (firmenadmin()) { <app-teamzuordnung /> }
   @if (session.sitzung()?.systemverwaltung) {
     <h2>Benutzerkonten und Firmenzugänge</h2>
     <p>Eine globale Kontosperre betrifft alle Firmen. Eine gesperrte Firmenzuordnung betrifft nur die jeweilige Firma.</p>
@@ -53,7 +54,7 @@
             <strong>{{ k.name }}</strong>
             <p>{{ k.aktiv ? 'Konto insgesamt aktiv' : 'Konto insgesamt gesperrt' }}{{ k.systemverwaltung ? ' · Systemverwaltung' : '' }}</p>
             @for (z of k.zuordnungen; track z.mandantenspeicherId) {
-              <p>{{ z.firma }} · {{ z.rolle === 'ADMIN' ? 'Administration' : z.rolle === 'PERSONAL' ? 'Personalverwaltung' : 'Lesen' }} · {{ z.aktiv ? 'Zugang aktiv' : 'Zugang gesperrt' }}
+              <p>{{ z.firma }} · {{ rollenname(z.rolle) }} · {{ z.aktiv ? 'Zugang aktiv' : 'Zugang gesperrt' }}
                 <button class="button secondary compact" [disabled]="arbeitet()" (click)="benutzerBearbeiten(k, z)">Zugang {{ k.name }} / {{ z.firma }} bearbeiten</button>
               </p>
             } @empty { <p>Noch keiner Firma zugeordnet.</p> }
@@ -89,7 +90,7 @@
                         <option [ngValue]="null">Bitte wählen</option>
                         @for (f of firmen(); track f.mandantenspeicherId) { <option [ngValue]="f.mandantenspeicherId">{{ f.name }} ({{ f.mandantenspeicherId }})</option> }
                       </select></label>
-                      <label class="field">Rolle in dieser Firma<select name="zugangRolle" [(ngModel)]="zugang.rolle"><option value="LESEN">Lesen</option><option value="PERSONAL">Personalverwaltung</option><option value="ADMIN">Administration</option></select></label>
+                      <label class="field">Rolle in dieser Firma<select name="zugangRolle" [(ngModel)]="zugang.rolle"><option value="MITARBEITER">Mitarbeiter</option><option value="TEAMLEITUNG">Teamleitung</option><option value="LESEN">Lesen</option><option value="PERSONAL">Personalverwaltung</option><option value="ADMIN">Administration</option></select></label>
                       <label><input type="checkbox" name="zugangAktiv" [(ngModel)]="zugang.aktiv"> Zugang aktiv</label>
                     </div>
                     <button class="button primary" [disabled]="!zugang.mandantenspeicherId">Firmenzugang speichern</button>

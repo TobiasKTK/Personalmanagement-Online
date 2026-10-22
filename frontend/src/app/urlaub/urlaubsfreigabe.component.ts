@@ -12,8 +12,8 @@ export interface UrlaubZuordnung { mitarbeiterId: number; konto: string | null; 
     @if (zuordnung(); as z) {
       <form (ngSubmit)="speichern()"><fieldset [disabled]="arbeitet()"><legend>Zuordnung für diesen Mitarbeiter</legend>
         <label class="field">Mitarbeiterkonto<select name="konto" [(ngModel)]="z.konto"><option [ngValue]="null">Kein Konto</option>@for (k of konten(); track k.name) { <option [ngValue]="k.name" [disabled]="!k.aktiv">{{ k.name }}{{ !k.aktiv ? ' (gesperrt)' : '' }}</option> }</select></label>
-        <label class="field">Genehmigungsmodus<select name="modus" [(ngModel)]="z.modus" (ngModelChange)="z.genehmiger = null"><option value="ALLE">Alle mit Personal- oder Administrationsrechten</option><option value="ZUGEORDNET">Zugeordneter Genehmiger</option></select></label>
-        @if (z.modus === 'ZUGEORDNET') { <label class="field">Genehmiger<select name="genehmiger" [(ngModel)]="z.genehmiger" required><option [ngValue]="null">Bitte wählen</option>@for (k of konten(); track k.name) { @if (k.rolle !== 'LESEN') { <option [ngValue]="k.name" [disabled]="!k.aktiv || k.name === z.konto">{{ k.name }}</option> } }</select></label> }
+        <label class="field">Genehmigungsmodus<select name="modus" [(ngModel)]="z.modus" (ngModelChange)="z.genehmiger = null"><option value="ALLE">Personalverwaltung, Administration und zuständige Teamleitungen</option><option value="ZUGEORDNET">Zugeordneter Genehmiger</option></select></label>
+        @if (z.modus === 'ZUGEORDNET') { <label class="field">Genehmiger<select name="genehmiger" [(ngModel)]="z.genehmiger" required><option [ngValue]="null">Bitte wählen</option>@for (k of konten(); track k.name) { @if (k.rolle === 'PERSONAL' || k.rolle === 'ADMIN' || k.rolle === 'TEAMLEITUNG') { <option [ngValue]="k.name" [disabled]="!k.aktiv || k.name === z.konto">{{ k.name }}</option> } }</select></label> }
         <p>Eigene Anträge können nicht selbst genehmigt werden. Geänderte Zuständigkeiten gelten auch für offene Anträge.</p>
         <button class="button primary">Urlaubsfreigabe speichern</button>
       </fieldset></form>

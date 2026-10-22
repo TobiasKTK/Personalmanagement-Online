@@ -37,7 +37,7 @@ export class UrlaubComponent implements OnInit {
   entscheidung: { antrag: Antrag; aktion: string; begruendung: string; warnungBestaetigt: boolean; besetzung: Besetzung | null } | null = null;
   ngOnInit(): void {
     const rolle = this.sitzung()?.rolle;
-    this.freigaben = rolle === 'PERSONAL' || rolle === 'ADMIN';
+    this.freigaben = rolle === 'PERSONAL' || rolle === 'ADMIN' || rolle === 'TEAMLEITUNG';
     if (this.route.snapshot.queryParamMap.get('eigene') === 'true') this.freigaben = false;
     this.fokusId = Number(this.route.snapshot.queryParamMap.get('antrag')) || null;
     void this.laden();

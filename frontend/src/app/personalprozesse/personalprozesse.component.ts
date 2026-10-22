@@ -31,6 +31,8 @@ export class PersonalprozesseComponent implements OnInit {
   readonly vorlagen = signal<Vorlage[]>([]);
   readonly konten = signal<string[]>([]);
   readonly mitarbeiter = signal<Mitarbeiter[]>([]);
+  readonly suchErgebnis = signal('');
+  readonly mitarbeiterPlatzhalter = signal('Bitte zuerst suchen');
   readonly arbeitet = signal(false);
   readonly fehler = signal('');
   readonly meldung = signal('');
@@ -88,10 +90,19 @@ export class PersonalprozesseComponent implements OnInit {
   async filtern(seite = 0): Promise<void> { if (this.arbeitet()) return; this.seite = seite; this.fokusId = null; await this.laden(); }
   async suchen(): Promise<void> {
     await this.ausfuehren(async () => {
+      this.mitarbeiter.set([]); this.start.mitarbeiterId = null;
+      this.suchErgebnis.set(''); this.mitarbeiterPlatzhalter.set('Bitte zuerst suchen');
       const daten = await firstValueFrom(mitFehlern(this.http.get<MitarbeiterSeite>('/api/mitarbeiter', { params: { suche: this.suche, groesse: 100 } })));
-      this.mitarbeiter.set(daten.mitarbeiter); this.start.mitarbeiterId = null;
-      if (daten.gesamt > daten.mitarbeiter.length) this.meldung.set('Bitte die Suche eingrenzen. Die ersten 100 Treffer werden angezeigt.');
-      else if (!daten.gesamt) this.meldung.set('Keine Mitarbeiter zur Suche gefunden.');
+      this.mitarbeiter.set(daten.mitarbeiter);
+      this.mitarbeiterPlatzhalter.set(daten.gesamt ? 'Bitte Mitarbeiter auswählen' : 'Keine Mitarbeiter gefunden');
+      if (daten.gesamt === 1) {
+        this.start.mitarbeiterId = daten.mitarbeiter[0].id;
+        this.suchErgebnis.set('1 Mitarbeiter gefunden und ausgewählt.');
+      } else if (daten.gesamt > daten.mitarbeiter.length) {
+        this.suchErgebnis.set(`${daten.gesamt} Mitarbeiter gefunden. Die ersten 100 Treffer werden angezeigt. Bitte die Suche eingrenzen oder einen Mitarbeiter auswählen.`);
+      } else if (daten.gesamt) {
+        this.suchErgebnis.set(`${daten.gesamt} Mitarbeiter gefunden. Bitte einen Mitarbeiter auswählen.`);
+      } else this.suchErgebnis.set('Keine Mitarbeiter zur Suche gefunden.');
     });
   }
   async starten(): Promise<void> {

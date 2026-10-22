@@ -18,6 +18,8 @@ export class MitarbeiterDetailsComponent implements AfterViewInit {
   readonly person = input.required<Mitarbeiter>();
   readonly darfSchreiben = input(false);
   readonly geschlossen = output<void>();
+  readonly stammdatenBearbeiten = output<void>();
+  readonly personalakteOeffnen = output<void>();
   @ViewChild('dialog') dialog!: ElementRef<HTMLDialogElement>;
   readonly abwesenheiten = signal<Abwesenheit[]>([]);
   readonly verlauf = signal<Verlauf[]>([]);
@@ -32,7 +34,10 @@ export class MitarbeiterDetailsComponent implements AfterViewInit {
   eingabe = { art: 'URLAUB', beginn: '', ende: '', halberTag: false };
   private anfrage = 0;
   ngAfterViewInit(): void { this.dialog.nativeElement.showModal(); void this.laden(); }
-  schliessen(event?: Event): void { event?.preventDefault(); if (!this.arbeitet()) this.geschlossen.emit(); }
+  schliessen(event?: Event): void {
+    event?.preventDefault();
+    if (!this.arbeitet()) { this.dialog.nativeElement.close(); this.geschlossen.emit(); }
+  }
   bearbeiten(a?: Abwesenheit): void {
     this.bearbeitet = a; this.eingabe = a ? { art: a.art, beginn: a.beginn, ende: a.ende, halberTag: a.halberTag } : { art: 'URLAUB', beginn: '', ende: '', halberTag: false };
   }

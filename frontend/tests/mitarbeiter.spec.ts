@@ -59,7 +59,8 @@ test('alle Stammdaten anlegen, bearbeiten, dauerhaft laden und löschen', async 
   await expect(page.locator('#stunden')).toHaveText('37,5');
   const daten = (await (await request.get('/api/mitarbeiter')).json()).mitarbeiter[0];
   expect(daten).toMatchObject({ ...basis, personalnummer: 9001, titel: 'Dr.', geburtsname: 'Meier', kuerzel: 'AM', geburtsdatum: '1990-03-28', austrittsdatum: '2030-12-31', organisationseinheit: 'Verwaltung', stelle: 'Leitung', beschaeftigungsart: 'Festangestellte', abwesenheitAmStichtag: '' });
-  await page.getByRole('button', { name: 'Anna Müller bearbeiten' }).click();
+  await page.getByRole('button', { name: 'Anna Müller Mitarbeiter öffnen' }).click();
+  await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();
   await expect(page.locator('#personalnummer')).toHaveAttribute('readonly', '');
   await page.locator('#nachname').fill('Schmidt');
   await page.locator('#geburtsdatum').fill('');
@@ -67,9 +68,11 @@ test('alle Stammdaten anlegen, bearbeiten, dauerhaft laden und löschen', async 
   await page.locator('#speichern').click();
   await expect(page.locator('#editor')).toHaveCount(0);
   await page.reload();
-  await page.getByRole('button', { name: 'Anna Schmidt bearbeiten' }).click();
+  await page.getByRole('button', { name: 'Anna Schmidt Mitarbeiter öffnen' }).click();
+  await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();
   await expect(page.locator('#geburtsdatum')).toHaveValue('');
   await page.locator('#abbrechen').click();
+  await page.locator('#mitarbeiter-details').getByRole('button', { name: 'Schließen', exact: true }).click();
   await page.getByRole('button', { name: 'Anna Schmidt löschen' }).click();
   await page.locator('#loeschdialog').getByRole('button', { name: 'Abbrechen' }).click();
   await expect(page.locator('tbody tr')).toHaveCount(1);
@@ -81,13 +84,15 @@ test('alle Stammdaten anlegen, bearbeiten, dauerhaft laden und löschen', async 
 test('Eintritt und Stunden eines künftigen Mitarbeiters gemeinsam korrigieren', async ({ page, request }) => {
   const person = await anlegen(request, { eintrittsdatum: '2035-03-01', wochenstunden: 40 });
   await page.goto('/mitarbeiter');
-  await page.getByRole('button', { name: 'Anna Müller bearbeiten' }).click();
+  await page.getByRole('button', { name: 'Anna Müller Mitarbeiter öffnen' }).click();
+  await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();
   await page.locator('#eintrittsdatum').fill('2035-04-01');
   await page.locator('#wochenstunden').fill('20');
   await page.locator('#speichern').click();
   await expect(page.locator('#editor')).toHaveCount(0);
   await page.reload();
-  await page.getByRole('button', { name: 'Anna Müller bearbeiten' }).click();
+  await page.getByRole('button', { name: 'Anna Müller Mitarbeiter öffnen' }).click();
+  await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();
   await expect(page.locator('#eintrittsdatum')).toHaveValue('2035-04-01');
   await expect(page.locator('#wochenstunden')).toHaveValue('20');
   const aktuell = await (await request.get(`/api/mitarbeiter/${person.id}`)).json();
@@ -120,17 +125,20 @@ test('ungespeicherte Änderungen: unverändert, zurückgesetzt, weiter, verwerfe
   await page.locator('#ungespeichert-speichern').click();
   await expect(page.locator('#editor')).toHaveCount(0);
   await expect(page.locator('tbody')).toContainText('Müller');
-  await page.getByRole('button', { name: 'Anna Müller bearbeiten' }).click();
+  await page.getByRole('button', { name: 'Anna Müller Mitarbeiter öffnen' }).click();
+  await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();
   await page.locator('#nachname').fill('Verwerfen');
   await page.locator('#abbrechen').click();
   await page.getByRole('button', { name: 'Verwerfen', exact: true }).click();
+  await page.locator('#mitarbeiter-details').getByRole('button', { name: 'Schließen', exact: true }).click();
   await expect(page.locator('tbody')).not.toContainText('Verwerfen');
 });
 
 test('Feldfehler und konkurrierende Änderungen bleiben zur Korrektur sichtbar', async ({ page, request }) => {
   const person = await anlegen(request);
   await page.goto('/mitarbeiter');
-  await page.getByRole('button', { name: 'Anna Müller bearbeiten' }).click();
+  await page.getByRole('button', { name: 'Anna Müller Mitarbeiter öffnen' }).click();
+  await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();
   await page.locator('#geburtsdatum').fill('2099-01-01');
   await page.locator('#speichern').click();
   await expect(page.locator('#geburtsdatum-fehler')).not.toBeEmpty();
@@ -144,6 +152,7 @@ test('Feldfehler und konkurrierende Änderungen bleiben zur Korrektur sichtbar',
   await expect(page.locator('#nachname')).toHaveValue('Lokal');
   await page.locator('#abbrechen').click();
   await page.getByRole('button', { name: 'Verwerfen', exact: true }).click();
+  await page.locator('#mitarbeiter-details').getByRole('button', { name: 'Schließen', exact: true }).click();
   await page.locator('#aktualisieren').click();
   await page.getByRole('button', { name: 'Anna Extern löschen' }).click();
   const aktuell = await extern.json();
@@ -276,7 +285,8 @@ test('eigene Statuswerte und Text mit HTML-Zeichen sicher darstellen', async ({ 
   await page.goto('/mitarbeiter');
   await expect(page.locator('tbody')).toContainText('<img src=x onerror=alert(1)>');
   await expect(page.locator('tbody img')).toHaveCount(0);
-  await page.getByRole('button', { name: /bearbeiten$/ }).click();
+  await page.getByRole('button', { name: /Mitarbeiter öffnen$/ }).click();
+  await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();
   await expect(page.locator('#beschaeftigungsart')).toHaveValue('Eigene Beschäftigungsart');
   await expect(page.locator('#beschaeftigungsart option')).toHaveCount(12);
   await page.locator('#speichern').click();

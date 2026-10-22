@@ -17,9 +17,10 @@ test('Alle Ergänzungen speichern, neu öffnen, bearbeiten und entfernen; FTE un
   const pfad = `/api/mitarbeiter/${person.id}/personaldaten/erweiterungen`;
   const fehler: string[] = []; page.on('pageerror', e => fehler.push(e.message));
   await page.goto('/mitarbeiter?suche=' + encodeURIComponent(person.nachname));
-  const einstieg = page.getByRole('button', { name: person.name + ' Personaldaten', exact: true });
+  await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+  const einstieg = page.getByRole('button', { name: 'Personalakte öffnen', exact: true });
   await einstieg.click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
   await dialog.getByRole('button', { name: 'Ergänzungen', exact: true }).click();
   await expect(dialog.getByText('0,80 FTE', { exact: true })).toBeVisible();
   const kontakte = await eintrag(dialog, 'kontakte', 'Kontakt');
@@ -85,8 +86,9 @@ test('Ungespeicherte Angaben überleben Bereichswechsel, Basisänderung, Konflik
   const person = await personAnlegen(request, 'Entwurf Ergänzungen');
   const pfad = `/api/mitarbeiter/${person.id}/personaldaten/erweiterungen`;
   await page.goto('/mitarbeiter?suche=' + encodeURIComponent(person.nachname));
-  await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+  await page.getByRole('button', { name: 'Personalakte öffnen', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
   await dialog.getByRole('button', { name: 'Ergänzungen', exact: true }).click();
   const kontakte = await eintrag(dialog, 'kontakte', 'Kontakt');
   await kontakte.getByLabel('Kontaktperson / Bezeichnung').fill('Mein Entwurf');
@@ -120,8 +122,9 @@ test('Ein lokaler Entwurf der Vollzeitbasis behält bei Aktualisierungen seinen 
   const person = await personAnlegen(request, 'Vollzeitbasis Konflikt');
   const pfad = `/api/mitarbeiter/${person.id}/personaldaten/erweiterungen`;
   await page.goto('/mitarbeiter?suche=' + encodeURIComponent(person.nachname));
-  await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+  await page.getByRole('button', { name: 'Personalakte öffnen', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
   await dialog.getByRole('button', { name: 'Ergänzungen', exact: true }).click();
   await dialog.getByText('Vollzeitbasis der Firma ändern', { exact: true }).click();
   await dialog.getByLabel('Vollzeit-Wochenstunden').fill('38');

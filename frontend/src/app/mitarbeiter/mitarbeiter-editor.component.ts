@@ -22,6 +22,7 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
   readonly person = input<Mitarbeiter | null>(null);
   readonly organisationen = input<Organisation[]>([]);
   readonly gespeichert = output<Mitarbeiter>();
+  readonly ergaenzen = output<Mitarbeiter>();
   readonly geschlossen = output<void>();
   readonly speichert = signal(false);
   readonly fehler = signal('');
@@ -144,7 +145,7 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
     void this.speichern();
   }
 
-  async speichern(): Promise<void> {
+  async speichern(weitereDaten = false): Promise<void> {
     if (this.speichert()) return;
     this.fehler.set('');
     this.feldfehler.set({});
@@ -179,7 +180,8 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
       const gespeichert = await firstValueFrom(this.api.speichern(eingabe, person?.id));
       this.editor.nativeElement.close();
       this.navigationAbschliessen(true);
-      this.gespeichert.emit(gespeichert);
+      if (weitereDaten && !person) this.ergaenzen.emit(gespeichert);
+      else this.gespeichert.emit(gespeichert);
     } catch (fehler) {
       this.fehler.set(fehler instanceof Error ? fehler.message : 'Speichern fehlgeschlagen.');
       if (fehler instanceof ApiFehler) this.feldfehler.set(fehler.felder);

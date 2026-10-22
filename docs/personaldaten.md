@@ -14,6 +14,20 @@ Die Teamübersicht bietet den Einstieg „Personaldaten“. Bestehende Stellen-/
 
 ## Regeln und Abnahme
 
+### Geführte Neuanlage
+
+Unter **Mitarbeiter hinzufügen** führt **Speichern und Daten ergänzen** durch drei Schritte:
+
+1. Persönliche Basisdaten, Beschäftigung und Organisation erfassen und den Mitarbeiter speichern.
+2. Direkt in der geöffneten Personalakte Bankverbindung, Kostenstellen, Vergütung, Ergänzungen, Dokumente und weitere Personaldaten pflegen. Die Angaben werden mit den jeweiligen Speicheraktionen übernommen. Der Hinweis im Dialog stellt klar, dass der Mitarbeiter bereits angelegt ist.
+3. **Weiter zum Mitarbeiterprofil** öffnet den Zugang zu Urlaubskonto, Arbeitstagen, Abwesenheiten und weiteren Details. Ungespeicherte Ergänzungen bleiben durch die bestehende Rückfrage geschützt; der bereits angelegte Mitarbeiter bleibt beim Schließen erhalten.
+
+**Nur Basisdaten speichern** beendet die Neuanlage unmittelbar. Zusätzliche Angaben können später über das Mitarbeiterprofil ergänzt werden. Fehler beim Anlegen erhalten die Eingaben; der zweite Schritt öffnet sich erst nach erfolgreichem Speichern.
+
+`frontend/tests/mitarbeiteranlage.spec.ts` prüft den Übergang, die dauerhafte Speicherung von Bankdaten, den Weg zu den weiteren Details, Speicherfehler, ungespeicherte Ergänzungen und den kurzen Ablauf bei 320 und 1440 Pixeln.
+
+### Fachliche Regeln
+
 - Personalverwaltung und Administration dürfen die neuen Daten lesen und pflegen. Leser erhalten auch über direkte API-Aufrufe keinen Zugriff. Alle Tabellen liegen im jeweiligen Mandantenschema.
 - Bankdaten sind optional; bei Angabe werden IBAN-Prüfsumme, BIC-Format und Kontoinhaber geprüft.
 - Kostenstellenanteile ergeben bei vorhandener Verteilung 100 Prozent. Vertretungen haben Person, Aufgabe und einen optional begrenzten Zeitraum; Selbstvertretungen sind ungültig. Sie vergeben keine Anwendungsrechte.

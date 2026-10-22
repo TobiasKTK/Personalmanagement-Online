@@ -129,7 +129,12 @@ public class BesetzungService {
     }
 
     // Die Berechtigung für den konkreten Antrag prüft UrlaubsantragService.
+    @PreAuthorize("hasAnyRole('PERSONAL', 'ADMIN', 'TEAMLEITUNG')")
     public Vorschau vorschau(Urlaubsantrag antrag) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean teamleitung = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_TEAMLEITUNG"));
+        var erlaubteOrganisationen = teamleitung ? jdbc.sql("SELECT organisation_id FROM teamleitung_organisation WHERE konto=:konto")
+            .param("konto", auth.getName()).query(Long.class).list() : List.<Long>of();
         var regelnNachOrganisation = new HashMap<Long, Regel>();
         for (var regel : liste()) {
             regelnNachOrganisation.put(regel.organisationseinheitId(), regel);
@@ -142,6 +147,9 @@ public class BesetzungService {
         for (long offset = 0; offset <= anzahlTage; offset++) {
             LocalDate tag = antrag.beginn().plusDays(offset);
             var antragsteller = mitarbeiter.finden(antrag.mitarbeiterId(), tag).orElseThrow();
+            if (teamleitung && !erlaubteOrganisationen.contains(antragsteller.organisationseinheitId())) {
+                throw new FachlicherFehler(KONFLIKT, "Der Urlaubszeitraum liegt teilweise außerhalb Ihrer Teamzuständigkeit. Bitte die Administration um Zuordnung zur Personalverwaltung bitten.");
+            }
             if (!antragsteller.historieBekannt()) {
                 hinweise.add("Für einen Teil des Zeitraums fehlt die gesicherte Organisationshistorie des Antragstellers.");
                 continue;

@@ -11,6 +11,18 @@ const angemeldet: CanActivateFn = async (_route, state) => {
     return s.mandantenspeicherId !== null || state.url === '/mandanten' ? true : router.parseUrl('/mandanten');
   } catch { return false; }
 };
+const firmaweit: CanActivateFn = async () => {
+  const session = inject(SitzungService), router = inject(Router);
+  const s = await session.laden();
+  if (s.mandantenspeicherId === null) return router.parseUrl('/mandanten');
+  if (s.rolle === 'MITARBEITER') return router.parseUrl('/self-service');
+  if (s.rolle === 'TEAMLEITUNG') return router.parseUrl('/mein-team');
+  return true;
+};
+const teamleitung: CanActivateFn = async () => {
+  const session = inject(SitzungService), router = inject(Router);
+  return (await session.laden()).rolle === 'TEAMLEITUNG' || router.parseUrl('/self-service');
+};
 const systemverwaltung: CanActivateFn = () => {
   const sitzung = inject(SitzungService), router = inject(Router);
   return sitzung.laden().then(s => s.systemverwaltung || router.parseUrl('/mandanten')).catch(() => false);
@@ -33,23 +45,24 @@ export const routes: Routes = [
     { path: 'verwaltung', canActivate: [systemverwaltung], loadComponent: () => import('./mandant/mandantenverwaltung.component').then(m => m.MandantenverwaltungComponent) },
   ] },
   { path: 'administration/mandanten', pathMatch: 'full', redirectTo: 'mandanten/verwaltung' },
-  { path: 'dashboard', canActivate: [angemeldet], loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
+  { path: 'dashboard', canActivate: [firmaweit], loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
   { path: 'exporte', canActivate: [personal], loadComponent: () => import('./planung/export.component').then(m => m.ExportComponent) },
   { path: 'auswertungen', canActivate: [personal], loadComponent: () => import('./auswertungen/auswertungen.component').then(m => m.AuswertungenComponent) },
   { path: 'import', canActivate: [personal], canDeactivate: [importVerlassen], loadComponent: () => import('./datenimport/datenimport.component').then(m => m.DatenimportComponent) },
   { path: 'fortbildungen', canActivate: [personal], loadComponent: () => import('./fortbildungen/fortbildungen.component').then(m => m.FortbildungenComponent) },
-  { path: 'organisation', canActivate: [angemeldet], loadComponent: () => import('./organisation/organisation.component').then(m => m.OrganisationComponent) },
+  { path: 'organisation', canActivate: [firmaweit], loadComponent: () => import('./organisation/organisation.component').then(m => m.OrganisationComponent) },
   { path: 'stellen', canActivate: [personal], loadComponent: () => import('./entwicklung/stellen.component').then(m => m.StellenComponent) },
   { path: 'kenntnisse', canActivate: [personal], loadComponent: () => import('./entwicklung/kenntnisse.component').then(m => m.KenntnisseComponent) },
   { path: 'ausbildung', canActivate: [personal], loadComponent: () => import('./entwicklung/ausbildung.component').then(m => m.AusbildungComponent) },
-  { path: 'kalender', canActivate: [angemeldet], loadComponent: () => import('./kalender/kalender.component').then(m => m.KalenderComponent) },
+  { path: 'kalender', canActivate: [firmaweit], loadComponent: () => import('./kalender/kalender.component').then(m => m.KalenderComponent) },
+  { path: 'mein-team', canActivate: [teamleitung], loadComponent: () => import('./teamleitung/mein-team.component').then(m => m.MeinTeamComponent) },
   { path: 'urlaub', canActivate: [angemeldet], loadComponent: () => import('./urlaub/urlaub.component').then(m => m.UrlaubComponent) },
   { path: 'benachrichtigungen', canActivate: [angemeldet], loadComponent: () => import('./benachrichtigungen/benachrichtigungen.component').then(m => m.BenachrichtigungenComponent) },
   { path: 'fristen', canActivate: [personal], loadComponent: () => import('./fristen/fristen.component').then(m => m.FristenComponent) },
-  { path: 'personalprozesse', canActivate: [angemeldet], loadComponent: () => import('./personalprozesse/personalprozesse.component').then(m => m.PersonalprozesseComponent) },
+  { path: 'personalprozesse', canActivate: [firmaweit], loadComponent: () => import('./personalprozesse/personalprozesse.component').then(m => m.PersonalprozesseComponent) },
   { path: 'self-service/pruefung', canActivate: [personal], data: { pruefung: true }, loadComponent: () => import('./selfservice/selfservice.component').then(m => m.SelfServiceComponent) },
   { path: 'self-service', canActivate: [angemeldet], loadComponent: () => import('./selfservice/selfservice.component').then(m => m.SelfServiceComponent) },
-  { path: 'mitarbeiter', canActivate: [angemeldet], canDeactivate: [teamVerlassen], loadComponent: () => import('./mitarbeiter/team.component').then(m => m.TeamComponent) },
+  { path: 'mitarbeiter', canActivate: [firmaweit], canDeactivate: [teamVerlassen], loadComponent: () => import('./mitarbeiter/team.component').then(m => m.TeamComponent) },
   { path: 'administration/organisationen', canActivate: [administration], loadComponent: () => import('./organisation/organisation.component').then(m => m.OrganisationComponent) },
   { path: 'administration/konten', canActivate: [kontenverwaltung], loadComponent: () => import('./konten/konten.component').then(m => m.KontenComponent) },
   { path: 'administration/planung', canActivate: [administration], loadComponent: () => import('./planung/planung.component').then(m => m.PlanungComponent) },

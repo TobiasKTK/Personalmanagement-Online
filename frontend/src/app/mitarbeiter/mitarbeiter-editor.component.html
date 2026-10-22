@@ -8,7 +8,7 @@
     #formularElement
     id="formular"
     [formGroup]="formular"
-    (ngSubmit)="speichern()"
+    (ngSubmit)="speichern(!person())"
     ngNativeValidate
   >
     <div class="dialog-heading">
@@ -33,6 +33,12 @@
       Mit * gekennzeichnete Felder sind erforderlich. Die Personalnummer wird
       automatisch vorgeschlagen und kann nur bei der Neuanlage geändert werden.
     </p>
+    @if (!person()) {
+      <div class="banner info">
+        <strong>1. Basisdaten · 2. Weitere Personaldaten · 3. Urlaub und Details</strong>
+        <p>Mit „Speichern und Daten ergänzen“ legen Sie den Mitarbeiter an und öffnen direkt die Personalakte für Bankverbindung, Vergütung, Dokumente und weitere Angaben. Diese können Sie auch später ergänzen.</p>
+      </div>
+    }
     @if (fehler()) {
       <div id="formular-fehler" class="banner error" role="alert">
         {{ fehler() }}
@@ -251,13 +257,19 @@
       >
         Abbrechen</button
       ><button
-        type="submit"
-        class="button primary"
+        [type]="person() ? 'submit' : 'button'"
+        class="button"
+        [class.primary]="!!person()"
+        [class.secondary]="!person()"
+        (click)="person() ? null : speichern()"
         id="speichern"
         [disabled]="speichert()"
       >
-        {{ speichert() ? "Wird gespeichert …" : "Mitarbeiter speichern" }}
+        {{ speichert() ? "Wird gespeichert …" : (person() ? "Mitarbeiter speichern" : "Nur Basisdaten speichern") }}
       </button>
+      @if (!person()) {
+        <button type="submit" class="button primary" [disabled]="speichert()">{{ speichert() ? 'Wird gespeichert …' : 'Speichern und Daten ergänzen' }}</button>
+      }
     </div>
   </form>
 </dialog>

@@ -32,8 +32,10 @@ export class TeamComponent implements OnInit {
 
   @ViewChild('loeschdialog') private loeschdialog!: ElementRef<HTMLDialogElement>;
   @ViewChild(MitarbeiterEditorComponent) private editor?: MitarbeiterEditorComponent;
+  @ViewChild(MitarbeiterDetailsComponent) private profil?: MitarbeiterDetailsComponent;
   @ViewChild(PersonaldatenComponent) private personaldatenDialog?: PersonaldatenComponent;
   readonly personaldaten = signal<Mitarbeiter | null>(null);
+  readonly neuanlage = signal<number | null>(null);
   readonly fristZiel = signal({ bereich: '', datensatz: '' });
 
   readonly groesse = 10;
@@ -100,13 +102,38 @@ export class TeamComponent implements OnInit {
   }
 
   async personaldatenSchliessen(id: number): Promise<void> {
+    this.neuanlage.set(null);
     this.personaldaten.set(null);
     this.fristZiel.set({ bereich: '', datensatz: '' });
     if (this.route.snapshot.queryParamMap.has('personaldatenId')) await this.router.navigate([], {
       relativeTo: this.route, queryParamsHandling: 'merge', queryParams: { personaldatenId: null, erweiterung: null, datensatz: null }, replaceUrl: true,
     });
+    if (this.details()?.id === id) {
+      try {
+        const person = await firstValueFrom(this.api.finden(id));
+        if (this.details()?.id !== id) return;
+        this.details.set(person);
+        await this.profil?.laden();
+      } catch (e) { this.profil?.fehler.set(this.fehlertext(e)); }
+    } else {
+      await this.laden();
+      this.profilEinstiegFokussieren(id);
+    }
+  }
+
+  async profilOeffnen(person: Mitarbeiter): Promise<void> {
+    try { this.details.set(await firstValueFrom(this.api.finden(person.id))); }
+    catch (e) { this.ladefehler.set(this.fehlertext(e)); }
+  }
+
+  async profilSchliessen(id: number): Promise<void> {
+    this.details.set(null);
     await this.laden();
-    setTimeout(() => this.element.nativeElement.querySelector<HTMLButtonElement>(`button[data-personaldaten-id="${id}"]`)?.focus());
+    this.profilEinstiegFokussieren(id);
+  }
+
+  private profilEinstiegFokussieren(id: number): void {
+    setTimeout(() => this.element.nativeElement.querySelector<HTMLButtonElement>(`button[data-profil-id="${id}"]`)?.focus());
   }
   statusText(wert: string): string {
     return ({ AKTIV: 'Aktuell beschäftigt', KUENFTIG: 'Künftiger Eintritt', AUSGESCHIEDEN: 'Ausgeschieden',
@@ -201,10 +228,22 @@ export class TeamComponent implements OnInit {
 
   gespeichert(person: Mitarbeiter): void {
     this.editorGeoeffnet.set(false);
+    if (this.details()?.id === person.id) {
+      this.details.set(person);
+      void this.profil?.laden();
+    }
     this.meldungAnzeigen(this.bearbeitet()
       ? 'Änderungen wurden gespeichert.'
       : `Mitarbeiter mit Personal-Nr. ${person.personalnummer} wurde hinzugefügt.`);
     void this.laden();
+  }
+
+  anlageFortsetzen(person: Mitarbeiter): void {
+    this.gespeichert(person);
+    this.neuanlage.set(person.id);
+    this.fristZiel.set({ bereich: '', datensatz: '' });
+    this.details.set(person);
+    this.personaldaten.set(person);
   }
 
   loeschenOeffnen(person: Mitarbeiter): void {

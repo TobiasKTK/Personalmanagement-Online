@@ -48,16 +48,29 @@ public class UrlaubsantragRepository {
     public boolean gebundeneAbwesenheit(long id) {
         return jdbc.sql("SELECT COUNT(*) FROM urlaubsantrag WHERE abwesenheit_id = :id AND status = 'GENEHMIGT'").param("id", id).query(Long.class).single() > 0;
     }
-    public List<String> genehmiger(long person, String antragsteller) {
-        return jdbc.sql("""
+    public boolean teamGenehmiger(String name, long person) {
+        return jdbc.sql("SELECT COUNT(*) FROM users u JOIN authorities r ON r.username=u.username JOIN VERWALTUNG.konto k ON k.username=u.username WHERE u.username=:konto AND u.enabled=TRUE AND k.enabled=TRUE AND r.authority='ROLE_TEAMLEITUNG' AND "
+                + de.pemonline.sicherheit.TeamService.zustandigSql(":person", "u.username"))
+            .param("konto", name).param("person", person).param("heute", LocalDate.now(clock)).query(Long.class).single() > 0;
+    }
+    /** Gemeinsame Regel für Listen, Einzelzugriff, Entscheidungen und Benachrichtigungen. */
+    public static String genehmigerSql(String person, String antragsteller) {
+        return """
             SELECT DISTINCT u.username FROM users u JOIN authorities r ON r.username = u.username
             JOIN VERWALTUNG.konto k ON k.username = u.username
-            JOIN urlaub_zuordnung z ON z.mitarbeiter_id = :person
-            WHERE u.enabled = TRUE AND k.enabled = TRUE AND r.authority IN ('ROLE_PERSONAL', 'ROLE_ADMIN')
-            AND (z.konto IS NULL OR u.username <> z.konto) AND u.username <> :antragsteller
-            AND (z.modus = 'ALLE' OR z.genehmiger = u.username OR EXISTS (
-              SELECT 1 FROM genehmiger_vertretung v WHERE v.genehmiger = z.genehmiger AND v.vertreter = u.username AND v.beginn <= :heute AND v.ende >= :heute))
-            """).param("person", person).param("antragsteller", antragsteller).param("heute", LocalDate.now(clock)).query(String.class).list();
+            JOIN urlaub_zuordnung z ON z.mitarbeiter_id = %s
+            WHERE u.enabled = TRUE AND k.enabled = TRUE
+            AND (z.konto IS NULL OR u.username <> z.konto) AND u.username <> %s
+            AND ((r.authority IN ('ROLE_PERSONAL', 'ROLE_ADMIN')
+              AND (z.modus = 'ALLE' OR z.genehmiger = u.username OR EXISTS (
+                SELECT 1 FROM genehmiger_vertretung v WHERE v.genehmiger = z.genehmiger AND v.vertreter = u.username AND v.beginn <= :heute AND v.ende >= :heute)))
+              OR (r.authority = 'ROLE_TEAMLEITUNG' AND (z.modus = 'ALLE' OR z.genehmiger = u.username)
+                AND %s))
+            """.formatted(person, antragsteller, de.pemonline.sicherheit.TeamService.zustandigSql("z.mitarbeiter_id", "u.username"));
+    }
+    public List<String> genehmiger(long person, String antragsteller) {
+        return jdbc.sql(genehmigerSql(":person", ":antragsteller")).param("person", person).param("antragsteller", antragsteller)
+            .param("heute", LocalDate.now(clock)).query(String.class).list();
     }
     public record Seite(List<Urlaubsantrag> eintraege, long gesamt) {}
     public Seite liste(String konto, boolean personal, boolean freigaben, String status, int seite) {
@@ -65,7 +78,7 @@ public class UrlaubsantragRepository {
             JOIN urlaub_zuordnung z ON z.mitarbeiter_id = a.mitarbeiter_id
             WHERE (:status = 'ALLE' OR a.status = :status) AND
             """ + (freigaben
-            ? " :personal = TRUE AND (z.modus = 'ALLE' OR z.genehmiger = :konto OR EXISTS (SELECT 1 FROM genehmiger_vertretung v WHERE v.genehmiger = z.genehmiger AND v.vertreter = :konto AND v.beginn <= :heute AND v.ende >= :heute)) AND (z.konto IS NULL OR z.konto <> :konto) AND a.antragsteller <> :konto "
+            ? " :personal = TRUE AND :konto IN (" + genehmigerSql("a.mitarbeiter_id", "a.antragsteller") + ") "
             : " z.konto = :konto ");
         var liste = listenParameter(jdbc.sql(SELECT + where + " ORDER BY a.erstellt DESC, a.id DESC LIMIT 20 OFFSET :offset"), konto, personal, freigaben, status)
                 .param("offset", (long) seite * 20).query(Urlaubsantrag.class).list();

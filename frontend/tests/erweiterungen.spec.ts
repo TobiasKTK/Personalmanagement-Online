@@ -53,7 +53,7 @@ test('Organisationen verwalten, Filter und Stichtag über Seiten erhalten', asyn
 test('Abwesenheiten bearbeiten, Überschneidung anzeigen und Änderungen nachvollziehen', async ({ page, request }, testInfo) => {
   expect((await request.post('/api/mitarbeiter', { data: { nachname: 'Details', vorname: 'Anna', wochenstunden: 40, eintrittsdatum: '2020-01-01' } })).status()).toBe(201);
   await page.goto('/mitarbeiter');
-  await page.getByRole('button', { name: 'Anna Details Details', exact: true }).click();
+  await page.getByRole('button', { name: 'Anna Details Mitarbeiter öffnen', exact: true }).click();
   const dialog = page.locator('#mitarbeiter-details');
   await expect(dialog).toBeVisible();
   await dialog.getByLabel('Beginn', { exact: true }).fill('2026-11-01');
@@ -145,8 +145,9 @@ test('Lokales Konto über Oberfläche anlegen und Leserechte nach Login anzeigen
   await page.goto('/administration/konten');
   await expect(page).toHaveURL(/\/mitarbeiter$/);
   await expect(page.locator('#neu')).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Anna Lesbar bearbeiten', exact: true })).toBeHidden();
-  await page.getByRole('button', { name: 'Anna Lesbar Details', exact: true }).click();
+  await page.getByRole('button', { name: 'Anna Lesbar Mitarbeiter öffnen', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Personalakte öffnen', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Abwesenheit anlegen' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Änderungsverlauf' })).toHaveCount(0);
 });

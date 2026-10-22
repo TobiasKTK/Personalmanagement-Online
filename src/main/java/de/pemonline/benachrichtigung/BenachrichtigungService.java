@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.*;
 import org.springframework.validation.annotation.Validated;
 
 @Service @Validated @Transactional(readOnly = true)
-@PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN')")
+@PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN', 'MITARBEITER', 'TEAMLEITUNG')")
 public class BenachrichtigungService {
     public record Eintrag(long id, Long antragId, String text, OffsetDateTime erstellt, boolean gelesen, String ziel) {}
     public record Seite(List<Eintrag> eintraege, long gesamt, long ungelesen) {}
@@ -27,14 +27,21 @@ public class BenachrichtigungService {
          WHERE (ziel NOT LIKE '/fristen%' AND ziel NOT LIKE '/self-service/pruefung%' AND ziel NOT LIKE '/mitarbeiter%' AND ziel NOT LIKE '/kenntnisse%')
             OR EXISTS (SELECT 1 FROM authorities a WHERE a.username = personalhinweis.konto AND a.authority IN ('ROLE_PERSONAL', 'ROLE_ADMIN')))
         """;
+    private static final String SICHTBAR = """
+        AND (NOT EXISTS (SELECT 1 FROM authorities nr WHERE nr.username=:konto AND nr.authority IN ('ROLE_MITARBEITER','ROLE_TEAMLEITUNG'))
+          OR (n.antrag_id IS NULL AND (n.ziel = '/self-service' OR n.ziel LIKE '/self-service?%' OR n.ziel LIKE '/self-service#%'))
+          OR EXISTS (SELECT 1 FROM urlaubsantrag ba LEFT JOIN urlaub_zuordnung bz ON bz.mitarbeiter_id=ba.mitarbeiter_id
+             WHERE ba.id=n.antrag_id AND (bz.konto=:konto OR :konto IN (
+        """ + de.pemonline.urlaub.UrlaubsantragRepository.genehmigerSql("ba.mitarbeiter_id", "ba.antragsteller") + "))))";
     public long ungelesen() {
-        return jdbc.sql("SELECT COUNT(*) FROM " + ALLE + " n WHERE konto = :konto AND NOT gelesen").param("konto", konto()).query(Long.class).single();
+        return jdbc.sql("SELECT COUNT(*) FROM " + ALLE + " n WHERE konto = :konto AND NOT gelesen " + SICHTBAR)
+            .param("konto", konto()).param("heute", LocalDate.now(clock)).query(Long.class).single();
     }
     public Seite liste(boolean nurUngelesen, @Min(0) int seite) {
-        String where = " FROM " + ALLE + " n WHERE konto = :konto AND (:nur = FALSE OR NOT gelesen)";
+        String where = " FROM " + ALLE + " n WHERE konto = :konto AND (:nur = FALSE OR NOT gelesen)" + SICHTBAR;
         var eintraege = jdbc.sql("SELECT id, antrag_id, text, erstellt, gelesen, ziel" + where + " ORDER BY erstellt DESC, id DESC LIMIT 20 OFFSET :offset")
-            .param("konto", konto()).param("nur", nurUngelesen).param("offset", (long) seite * 20).query(Eintrag.class).list();
-        long gesamt = jdbc.sql("SELECT COUNT(*)" + where).param("konto", konto()).param("nur", nurUngelesen).query(Long.class).single();
+            .param("konto", konto()).param("heute", LocalDate.now(clock)).param("nur", nurUngelesen).param("offset", (long) seite * 20).query(Eintrag.class).list();
+        long gesamt = jdbc.sql("SELECT COUNT(*)" + where).param("konto", konto()).param("heute", LocalDate.now(clock)).param("nur", nurUngelesen).query(Long.class).single();
         return new Seite(eintraege, gesamt, ungelesen());
     }
     @Transactional public void gelesen(long id) {

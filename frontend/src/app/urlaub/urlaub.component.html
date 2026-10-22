@@ -19,7 +19,7 @@
   <h2>{{ freigaben ? 'Anträge zur Freigabe' : 'Meine Anträge' }}</h2>
   @if (fokusId) { <p>Geöffneter Antrag aus einer Benachrichtigung. <button class="button secondary compact" [disabled]="arbeitet()" (click)="laden(true)">Alle Anträge anzeigen</button></p> }
   <form class="filter-grid" (ngSubmit)="laden(true)"><fieldset [disabled]="arbeitet()"><legend>Anträge filtern</legend>
-    @if (sitzung()?.rolle !== 'LESEN') { <label><input type="checkbox" name="freigaben" [(ngModel)]="freigaben"> Zuständige Freigaben anzeigen</label> }
+    @if (sitzung()?.rolle === 'PERSONAL' || sitzung()?.rolle === 'ADMIN' || sitzung()?.rolle === 'TEAMLEITUNG') { <label><input type="checkbox" name="freigaben" [(ngModel)]="freigaben"> Zuständige Freigaben anzeigen</label> }
     <label class="field">Status<select name="status" [(ngModel)]="status"><option value="ALLE">Alle Status</option><option value="BEANTRAGT">Beantragt</option><option value="GENEHMIGT">Genehmigt</option><option value="ABGELEHNT">Abgelehnt</option><option value="ZURUECKGEZOGEN">Zurückgezogen</option><option value="STORNIERT">Storniert</option></select></label>
     <button class="button secondary">Anträge anzeigen</button>
   </fieldset></form>

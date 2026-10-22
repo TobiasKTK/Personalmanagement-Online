@@ -57,7 +57,7 @@ public class KontenService {
     public void speichern(@Valid @NotNull Eingabe e, boolean neu) {
         String angemeldet = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         sperren();
-        if (!Set.of("LESEN", "PERSONAL", "ADMIN").contains(e.rolle()))
+        if (!Set.of("LESEN", "PERSONAL", "ADMIN", "MITARBEITER", "TEAMLEITUNG").contains(e.rolle()))
             throw new FachlicherFehler(UNGUELTIG, "Ungültige Rolle.");
         boolean existiert = jdbc.sql("SELECT COUNT(*) FROM users WHERE username = :name").param("name", e.name()).query(Long.class).single() > 0;
         if (neu && jdbc.sql("SELECT COUNT(*) FROM VERWALTUNG.konto WHERE username = :name").param("name", e.name()).query(Long.class).single() > 0)
@@ -84,6 +84,10 @@ public class KontenService {
             }
             jdbc.sql("UPDATE users SET enabled = :aktiv WHERE username = :name").param("name", e.name()).param("aktiv", e.aktiv()).update();
             jdbc.sql("UPDATE authorities SET authority = :rolle WHERE username = :name").param("name", e.name()).param("rolle", "ROLE_" + e.rolle()).update();
+            if (!e.rolle().equals("TEAMLEITUNG")) {
+                jdbc.sql("DELETE FROM teamleitung_organisation WHERE konto = :name").param("name", e.name()).update();
+                jdbc.sql("UPDATE teamleitung_stand SET version = version + 1 WHERE konto = :name").param("name", e.name()).update();
+            }
         }
         // Bestehende Sitzungen dürfen entfernte Rechte nicht weiterverwenden.
         if (!neu) for (Object principal : sessions.getAllPrincipals()) {

@@ -1,6 +1,57 @@
 import { test, expect } from './fixtures';
 import type { APIRequestContext } from '@playwright/test';
 
+for (const typ of ['Onboarding', 'Offboarding']) {
+  test(`Personalprozess: Mitarbeitersuche macht Treffer beim ${typ} sichtbar`, async ({ page, request }, testInfo) => {
+    const fehler: string[] = [];
+    page.on('pageerror', e => fehler.push(e.message));
+    const nachname = `Suchtest${typ}`;
+    const personen = [];
+    for (const vorname of ['Anna', 'Berta']) {
+      const antwort = await request.post('/api/mitarbeiter', { data: {
+        personalnummer: (typ === 'Onboarding' ? 870000 : 880000) + personen.length + 1,
+        vorname, nachname, wochenstunden: 32, eintrittsdatum: typ === 'Onboarding' ? '2030-11-01' : '2020-01-01',
+      } });
+      expect(antwort.status()).toBe(201);
+      personen.push(await antwort.json());
+    }
+    await page.goto('/personalprozesse');
+    await page.getByRole('combobox', { name: 'Vorlage für neuen Vorgang', exact: true }).selectOption({ label:
+      typ === 'Onboarding' ? 'Onboarding · Eintritt vorbereiten' : 'Offboarding · Austritt begleiten',
+    });
+    const suche = page.getByLabel('Mitarbeiter suchen', { exact: true });
+    const auswahl = page.getByRole('combobox', { name: 'Mitarbeiter für Vorgang', exact: true });
+    await suche.fill(personen[0].name);
+    await page.getByRole('button', { name: 'Mitarbeiter suchen', exact: true }).click();
+    // Die API liefert bereits vor der Korrektur den richtigen Treffer; sichtbar war nur der alte Platzhalter.
+    await expect(auswahl.locator('option')).toHaveText(['Bitte Mitarbeiter auswählen', `${personen[0].name} · ${personen[0].personalnummer}`]);
+    await expect(page.getByText('1 Mitarbeiter gefunden und ausgewählt.', { exact: true })).toBeVisible();
+    await expect(auswahl.locator('option:checked')).toHaveText(`${personen[0].name} · ${personen[0].personalnummer}`);
+    await suche.fill(String(personen[1].personalnummer));
+    await suche.press('Enter');
+    await expect(auswahl.locator('option:checked')).toHaveText(`${personen[1].name} · ${personen[1].personalnummer}`);
+    await suche.fill(nachname);
+    await suche.press('Enter');
+    await expect(page.getByText('2 Mitarbeiter gefunden. Bitte einen Mitarbeiter auswählen.', { exact: true })).toBeVisible();
+    await expect(auswahl.locator('option:checked')).toHaveText('Bitte Mitarbeiter auswählen');
+    await auswahl.selectOption({ label: `${personen[1].name} · ${personen[1].personalnummer}` });
+    await page.getByLabel('Eintritts- oder Austrittsdatum', { exact: true }).fill('2030-11-01');
+    await page.screenshot({ path: testInfo.outputPath('mitarbeitersuche-desktop.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Vorgang starten', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Vorgang gestartet. Die Verantwortlichen wurden benachrichtigt.');
+    await expect(page.getByRole('article').filter({ hasText: personen[1].name }).first()).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await suche.fill('Nichtvorhanden' + nachname);
+    await suche.press('Enter');
+    await expect(page.getByText('Keine Mitarbeiter zur Suche gefunden.', { exact: true })).toBeVisible();
+    await expect(auswahl.locator('option')).toHaveText(['Keine Mitarbeiter gefunden']);
+    await expect(page.getByRole('button', { name: 'Vorgang starten', exact: true })).toBeDisabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath('mitarbeitersuche-mobil.png'), fullPage: true });
+    expect(fehler).toEqual([]);
+  });
+}
+
 async function prozessAnlegen(request: APIRequestContext) {
   const antwort = await request.post('/api/mitarbeiter', { data: {
     vorname: 'Prozess', nachname: 'Regression', wochenstunden: 32, eintrittsdatum: '2020-01-01',

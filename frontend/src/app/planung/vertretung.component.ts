@@ -27,7 +27,7 @@ export class VertretungComponent implements OnInit {
   eingabe = { genehmiger: '', vertreter: '', beginn: '', ende: '' };
   ngOnInit(): void { void this.ausfuehren(async () => {
     const k = await firstValueFrom(mitFehlern(this.http.get<{ name: string; rolle: string; aktiv: boolean }[]>('/api/konten')));
-    this.konten.set(k.filter(k => k.aktiv && k.rolle !== 'LESEN').map(k => k.name)); await this.laden();
+    this.konten.set(k.filter(k => k.aktiv && (k.rolle === 'PERSONAL' || k.rolle === 'ADMIN')).map(k => k.name)); await this.laden();
   }); }
   bearbeiten(v?: Vertretung): void { this.bearbeitet = v ?? null; this.eingabe = v ? { genehmiger: v.genehmiger, vertreter: v.vertreter, beginn: v.beginn, ende: v.ende } : { genehmiger: '', vertreter: '', beginn: '', ende: '' }; }
   async speichern(): Promise<void> { await this.ausfuehren(async () => {

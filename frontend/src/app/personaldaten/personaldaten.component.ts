@@ -24,6 +24,7 @@ registerLocaleData(localeDe);
 export class PersonaldatenComponent implements AfterViewInit {
   private readonly http = inject(HttpClient);
   readonly person = input.required<Mitarbeiter>();
+  readonly neuanlage = input(false);
   readonly fristBereich = input('');
   readonly fristDatensatz = input('');
   readonly geschlossen = output<void>();

@@ -1,9 +1,20 @@
 <dialog #dialog id="mitarbeiter-details" class="details-dialog" aria-labelledby="details-titel" (cancel)="schliessen($event)">
-  <div class="dialog-heading"><h2 id="details-titel">{{ person().name }} · Personal-Nr. {{ person().personalnummer }}</h2><button class="button secondary" (click)="schliessen()" [disabled]="arbeitet()">Schließen</button></div>
+  <div class="dialog-heading profil-heading"><div><h2 id="details-titel">Mitarbeiterprofil · {{ person().name }}</h2><p>Personal-Nr. {{ person().personalnummer }}</p></div><button class="button secondary" autofocus (click)="schliessen()" [disabled]="arbeitet()">Schließen</button></div>
   <div class="details-inhalt">
-    <p>{{ person().organisationseinheit || 'Keine Organisationseinheit' }} · {{ person().wochenstunden }} Wochenstunden</p>
+    <section aria-labelledby="profil-stammdaten">
+      <h3 id="profil-stammdaten">Stammdaten</h3>
+      <p>{{ person().organisationseinheit || 'Keine Organisationseinheit' }} · {{ person().wochenstunden }} Wochenstunden</p>
+      <p>{{ person().stelle || 'Keine Stelle erfasst' }} · Eintritt {{ person().eintrittsdatum | date:'dd.MM.yyyy' }}@if (person().austrittsdatum) { · Austritt {{ person().austrittsdatum | date:'dd.MM.yyyy' }} }</p>
+      @if (darfSchreiben()) {
+        <div class="profil-aktionen">
+          <button class="button primary" (click)="stammdatenBearbeiten.emit()" [disabled]="arbeitet()">Stammdaten bearbeiten</button>
+          <button class="button secondary" (click)="personalakteOeffnen.emit()" [disabled]="arbeitet()">Personalakte öffnen</button>
+        </div>
+        <p class="section-description">Die Personalakte enthält weitere Personaldaten, Beschäftigung, Organisation, Vergütung und Dokumente.</p>
+      }
+    </section>
     @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
-    <button class="button secondary compact" (click)="laden()" [disabled]="laedt() || arbeitet()">Details aktualisieren</button>
+    <button class="button secondary compact" (click)="laden()" [disabled]="laedt() || arbeitet()">Abwesenheiten und Verlauf aktualisieren</button>
     @if (person().altBeschaeftigungsstatus || person().altAbwesenheitsstatus) {
       <p>Altangaben ohne zeitliche Zuordnung: {{ person().altBeschaeftigungsstatus || '—' }} · {{ person().altAbwesenheitsstatus || '—' }}.</p>
     }
@@ -11,7 +22,7 @@
     @if (darfSchreiben()) { <details><summary>Abteilungs- und Arbeitszeitverlauf</summary><app-historie [person]="person().id" /></details> }
     @if (darfSchreiben() && !laedt()) { <details><summary>Urlaubskonto und Arbeitstage</summary><app-urlaubskonto [person]="person().id" [darfSchreiben]="true" /></details> }
     @if (sitzung()?.rolle === 'ADMIN' && !laedt()) { <details><summary>Benutzerkonto und Urlaubsfreigabe</summary><app-urlaubsfreigabe [person]="person().id" /></details> }
-    @if (laedt()) { <p role="status">Details werden geladen …</p> }
+    @if (laedt()) { <p role="status">Abwesenheiten und Verlauf werden geladen …</p> }
     @if (darfSchreiben()) {
       <form (ngSubmit)="speichern()" class="filter-grid">
         <label class="field">Art<select name="art" [(ngModel)]="eingabe.art" [disabled]="arbeitet()"><option value="URLAUB">Urlaub</option><option value="KRANKHEIT">Krankheit</option><option value="ELTERNZEIT">Elternzeit</option><option value="SONSTIGES">Sonstiges</option></select></label>

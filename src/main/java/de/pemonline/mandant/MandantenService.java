@@ -79,7 +79,7 @@ public class MandantenService {
     }
     @PreAuthorize("hasRole('SYSTEMADMIN')")
     public void zuweisung(@Positive long id, @Valid @NotNull Zuordnung e) {
-        if (!Set.of("LESEN", "PERSONAL", "ADMIN").contains(e.rolle())) throw new FachlicherFehler(UNGUELTIG, "Ungültige Rolle.");
+        if (!Set.of("LESEN", "PERSONAL", "ADMIN", "MITARBEITER", "TEAMLEITUNG").contains(e.rolle())) throw new FachlicherFehler(UNGUELTIG, "Ungültige Rolle.");
         if (!finden(id).status().equals("AKTIV")) throw new FachlicherFehler(KONFLIKT, "Mandantenspeicher ist noch nicht bereit.");
         transaktion.executeWithoutResult(status -> {
             sperren();
@@ -98,6 +98,10 @@ public class MandantenService {
         } else {
             jdbc.sql("UPDATE " + schema + ".users SET enabled = :aktiv WHERE username = :name").param("name", e.name()).param("aktiv", e.aktiv()).update();
             jdbc.sql("UPDATE " + schema + ".authorities SET authority = :rolle WHERE username = :name").param("name", e.name()).param("rolle", "ROLE_" + e.rolle()).update();
+            if (!e.rolle().equals("TEAMLEITUNG")) {
+                jdbc.sql("DELETE FROM " + schema + ".teamleitung_organisation WHERE konto = :name").param("name", e.name()).update();
+                jdbc.sql("UPDATE " + schema + ".teamleitung_stand SET version = version + 1 WHERE konto = :name").param("name", e.name()).update();
+            }
         }
         jdbc.sql("MERGE INTO VERWALTUNG.konto_mandant (username, mandantenspeicher_id) KEY (username, mandantenspeicher_id) VALUES (:name, :id)")
             .param("name", e.name()).param("id", id).update();

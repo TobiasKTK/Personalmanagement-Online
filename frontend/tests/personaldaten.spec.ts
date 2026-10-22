@@ -29,9 +29,10 @@ test('Personaldaten speichern, Vergütung historisieren und Agenda-PDF anzeigen'
   const vertretung = await vertretungAntwort.json();
   const fehler: string[] = []; page.on('pageerror', e => fehler.push(e.message));
   await page.goto('/mitarbeiter?suche=' + encodeURIComponent(name));
-  const einstieg = page.getByRole('button', { name: person.name + ' Personaldaten', exact: true });
+  await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+  const einstieg = page.getByRole('button', { name: 'Personalakte öffnen', exact: true });
   await einstieg.click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
   await expect(dialog.getByLabel('Kontoinhaber', { exact: true })).toBeVisible();
   await dialog.getByLabel('Kontoinhaber', { exact: true }).fill('Test Person');
   await dialog.getByLabel('IBAN', { exact: true }).fill('DE89 3704 0044 0532 0130 00');
@@ -108,8 +109,9 @@ test('Stellenprofil, Organisation, Arbeitszeit und Planstelle werden aus der Per
   const planstelle = await plan.json();
   try {
     await page.goto('/mitarbeiter?suche=Organisation%20E2E');
-    await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+    await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+    await page.getByRole('button', { name: 'Personalakte öffnen', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
     await dialog.getByRole('button', { name: 'Organisation', exact: true }).click();
     await dialog.getByLabel('Zugewiesenes Stellenprofil').selectOption({ label: profil.name });
     await dialog.getByRole('button', { name: 'Personaldaten speichern' }).click();
@@ -144,8 +146,9 @@ test('Fehler erhalten Eingaben; Beschäftigungszeiten und Wiedereintritt sind be
   const r = await request.post('/api/mitarbeiter', { data: { vorname: 'Test', nachname: 'Wiedereintritt E2E', wochenstunden: 40, eintrittsdatum: '2020-01-01', austrittsdatum: '2020-12-31' } });
   expect(r.status()).toBe(201); const person = await r.json();
   await page.goto('/mitarbeiter?suche=Wiedereintritt%20E2E');
-  await page.getByRole('button', { name: person.name + ' Personaldaten', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: /Personaldaten/ });
+  await page.getByRole('button', { name: person.name + ' Mitarbeiter öffnen', exact: true }).click();
+  await page.getByRole('button', { name: 'Personalakte öffnen', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /^Personaldaten ·/ });
   await dialog.getByLabel('Kontoinhaber', { exact: true }).fill('Bleibt erhalten');
   await dialog.getByLabel('IBAN', { exact: true }).fill('DE00370400440532013000');
   await dialog.getByRole('button', { name: 'Personaldaten speichern' }).click();

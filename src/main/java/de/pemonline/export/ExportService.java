@@ -45,7 +45,7 @@ public class ExportService {
         });
         return out.toString().getBytes(StandardCharsets.UTF_8);
     }
-    @PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('LESEN', 'PERSONAL', 'ADMIN', 'MITARBEITER', 'TEAMLEITUNG')")
     public byte[] eigenerUrlaub(@Min(1) @Max(9999) int jahr) {
         String konto = SecurityContextHolder.getContext().getAuthentication().getName();
         var profil = antraege.eigenesProfil(konto).orElseThrow(() -> new FachlicherFehler(FachlicherFehler.Art.KONFLIKT, "Das Konto ist keinem Mitarbeiter zugeordnet."));

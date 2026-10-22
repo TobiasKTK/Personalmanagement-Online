@@ -9,6 +9,6 @@ public class OberflaecheController {
     @GetMapping({"/fristen", "/personalprozesse", "/self-service", "/self-service/pruefung", "/mitarbeiter", "/organisation", "/stellen", "/kenntnisse", "/ausbildung", "/kalender", "/urlaub", "/benachrichtigungen", "/dashboard", "/exporte", "/mandanten", "/mandanten/verwaltung", "/administration/mandanten", "/administration/organisationen", "/administration/konten", "/administration/planung"})
     public String oberflaeche() { return "forward:/index.html"; }
 
-    @GetMapping({"/auswertungen", "/import", "/fortbildungen"})
+    @GetMapping({"/auswertungen", "/import", "/fortbildungen", "/mein-team"})
     public String personalAusbau() { return "forward:/index.html"; }
 }
