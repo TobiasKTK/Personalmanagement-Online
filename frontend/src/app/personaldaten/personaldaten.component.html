@@ -55,7 +55,7 @@
       @if (organisationBesucht) { <div [hidden]="bereich !== 'Organisation'">
           <form id="organisation-form" (ngSubmit)="speichern()"><fieldset class="akten-felder" [disabled]="arbeitet()"><legend>Stelle</legend>
             <label class="field">Zugewiesenes Stellenprofil<select name="profilId" [(ngModel)]="d.profilId"><option [ngValue]="null">Kein Stellenprofil zugewiesen</option>@for (p of profile(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select></label>
-            @if (a.person.stelle) { <p>Bisherige Stellenbezeichnung: {{ a.person.stelle }}</p> }
+            @if (a.person.stelle) { <p>Aktuelle Stellenbezeichnung: {{ a.person.stelle }}</p> }
           </fieldset></form>
           <h3>Organisationseinheit und Arbeitszeit</h3>
           <p>{{ a.person.organisationseinheit || 'Keine Organisationseinheit' }} · {{ a.person.wochenstunden }} Wochenstunden</p>

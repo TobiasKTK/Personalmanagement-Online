@@ -34,7 +34,7 @@ function beispiel(index, stichtag, organisationId) {
     eintrittsdatum: eintritt,
     austrittsdatum: status === 19 ? datumVerschieben(stichtag, -(30 + index % 300)) : null,
     organisationseinheitId: organisationId,
-    stelle: `${MARKIERUNG} / Beispielstelle ${abteilungen[index % abteilungen.length]}`,
+    stelle: `${MARKIERUNG} / ${abteilungen[index % abteilungen.length]}`,
     beschaeftigungsart: ['Festangestellte', 'Werkstudenten', 'befristete Mitarbeiter', 'Aushilfskräfte'][index % 4],
     wochenstunden: [20, 25, 30, 35, 37.5, 40][index % 6],
   };

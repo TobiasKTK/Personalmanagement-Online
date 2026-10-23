@@ -1,13 +1,16 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Mitarbeiter, MitarbeiterEingabe, MitarbeiterSeite, Statistik, Filter } from '../shared/model';
+import { Mitarbeiter, MitarbeiterEingabe, MitarbeiterSeite, Statistik, Filter, StellenzuordnungStand } from '../shared/model';
 import { mitFehlern } from '../shared/api-fehler';
 
 @Injectable({ providedIn: 'root' })
 export class MitarbeiterApiService {
   private readonly http = inject(HttpClient);
   finden(id: number): Observable<Mitarbeiter> { return mitFehlern(this.http.get<Mitarbeiter>(`/api/mitarbeiter/${id}`)); }
+  stellenzuordnung(id: number): Observable<StellenzuordnungStand> {
+    return mitFehlern(this.http.get<StellenzuordnungStand>(`/api/mitarbeiter/${id}/personaldaten/stellenzuordnung`));
+  }
   liste(suche: string, seite: number, groesse: number, filter: Filter = {}): Observable<MitarbeiterSeite> {
     return mitFehlern(this.http.get<MitarbeiterSeite>('/api/mitarbeiter', {
       params: { suche, seite, groesse, ...filter },

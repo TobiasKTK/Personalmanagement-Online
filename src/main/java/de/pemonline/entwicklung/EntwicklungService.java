@@ -30,7 +30,7 @@ public class EntwicklungService {
     }
 
     public List<Person> personen() {
-        return jdbc.sql("SELECT id, name, personalnummer FROM mitarbeiter ORDER BY LOWER(name), id")
+        return jdbc.sql("SELECT id, name, personalnummer FROM mitarbeiter ORDER BY LOWER(nachname), LOWER(vorname), id")
                 .query(Person.class).list();
     }
 

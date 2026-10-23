@@ -1,6 +1,8 @@
 package de.pemonline.mitarbeiter;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import de.pemonline.personaldaten.PersonaldatenModel.Stellenzuordnung;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -48,7 +50,16 @@ public record MitarbeiterEingabe(
         @PositiveOrZero(message = "Die Version darf nicht negativ sein.")
         Long version,
         @Positive Long organisationseinheitId,
-        LocalDate datenGueltigAb) {
+        LocalDate datenGueltigAb,
+        @Valid Stellenzuordnung stellenzuordnung) {
+
+    public MitarbeiterEingabe(Long personalnummer, String titel, String nachname, String vorname, String geburtsname,
+            String kuerzel, LocalDate geburtsdatum, LocalDate eintrittsdatum, LocalDate austrittsdatum,
+            String organisationseinheit, String stelle, String beschaeftigungsart,
+            BigDecimal wochenstunden, Long version, Long organisationseinheitId, LocalDate datenGueltigAb) {
+        this(personalnummer, titel, nachname, vorname, geburtsname, kuerzel, geburtsdatum, eintrittsdatum, austrittsdatum,
+                organisationseinheit, stelle, beschaeftigungsart, wochenstunden, version, organisationseinheitId, datenGueltigAb, null);
+    }
 
     public MitarbeiterEingabe(Long personalnummer, String titel, String nachname, String vorname, String geburtsname,
             String kuerzel, LocalDate geburtsdatum, LocalDate eintrittsdatum, LocalDate austrittsdatum,

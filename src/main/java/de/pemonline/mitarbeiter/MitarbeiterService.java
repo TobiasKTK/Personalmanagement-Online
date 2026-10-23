@@ -74,6 +74,7 @@ public class MitarbeiterService {
         Long organisationId = organisationen.zuordnung(eingabe.organisationseinheitId(), eingabe.organisationseinheit());
         long id = repository.anlegen(eingabe, personalnummer, organisationId);
         historie.anlegen(id, eingabe.eintrittsdatum(), organisationId, eingabe.wochenstunden());
+        if (eingabe.stellenzuordnung() != null) personaldaten.stelleZuordnen(id, eingabe.stellenzuordnung());
         repository.personalnummerVorruecken(Math.max(naechste, personalnummer + 1));
         ereignisse.vormerken(new MitarbeiterEreignis(id, Aktion.ANGELEGT, clock.instant()));
         Mitarbeiter neu = finden(id);
@@ -112,10 +113,11 @@ public class MitarbeiterService {
             LocalDate ab = eingabe.eintrittsdatum().isAfter(heute) ? eingabe.eintrittsdatum() : heute;
             historie.aktuelleAenderung(id, ab, organisationId, eingabe.wochenstunden());
         }
+        if (eingabe.stellenzuordnung() != null) personaldaten.stelleZuordnen(id, eingabe.stellenzuordnung());
         ereignisse.vormerken(new MitarbeiterEreignis(id, Aktion.GEAENDERT, clock.instant()));
         Mitarbeiter neu = repository.finden(id, heute).orElseThrow();
         verlauf.speichern(id, "GEAENDERT", bestehend, neu);
-        personaldaten.standFesthalten(id);
+        if (eingabe.stellenzuordnung() == null) personaldaten.standFesthalten(id);
         return neu;
     }
 

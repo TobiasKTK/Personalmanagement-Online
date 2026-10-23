@@ -16,13 +16,32 @@ public class MitarbeiterRepository {
              WHEN m.austrittsdatum < :stichtag OR EXISTS (SELECT 1 FROM beschaeftigungszeit b WHERE b.mitarbeiter_id = m.id AND b.ende < :stichtag)
              THEN 'AUSGESCHIEDEN' ELSE 'KUENFTIG' END
         """;
-    private static final java.util.Map<String, String> SORTIERUNG = java.util.Map.of(
-            "nachname", "LOWER(m.nachname)", "personalnummer", "m.personalnummer",
-            "eintrittsdatum", "m.eintrittsdatum", "wochenstunden", "COALESCE(h.wochenstunden, m.wochenstunden)",
-            "organisationseinheit", "LOWER(o.name)");
+    private static final String ABWESENHEIT_AM_STICHTAG = """
+            COALESCE((SELECT a.art FROM abwesenheit a
+                WHERE a.mitarbeiter_id = m.id AND a.beginn <= :stichtag AND a.ende >= :stichtag
+                ORDER BY a.id FETCH FIRST 1 ROW ONLY), '')
+            """;
+    private static final java.util.Map<String, String> SORTIERUNG = java.util.Map.ofEntries(
+            java.util.Map.entry("personalnummer", "m.personalnummer"),
+            java.util.Map.entry("titel", "LOWER(m.titel)"),
+            java.util.Map.entry("nachname", "LOWER(m.nachname)"),
+            java.util.Map.entry("vorname", "LOWER(m.vorname)"),
+            java.util.Map.entry("geburtsname", "LOWER(m.geburtsname)"),
+            java.util.Map.entry("kuerzel", "LOWER(m.kuerzel)"),
+            java.util.Map.entry("geburtsdatum", "m.geburtsdatum"),
+            java.util.Map.entry("eintrittsdatum", "eintrittsdatum"),
+            java.util.Map.entry("austrittsdatum", "austrittsdatum"),
+            java.util.Map.entry("organisationseinheit", "LOWER(o.name)"),
+            java.util.Map.entry("stelle", "LOWER(COALESCE(sp.name, m.stelle))"),
+            java.util.Map.entry("beschaeftigungsart", "LOWER(m.beschaeftigungsart)"),
+            java.util.Map.entry("abwesenheitAmStichtag", "CASE " + ABWESENHEIT_AM_STICHTAG + """
+                    WHEN 'ELTERNZEIT' THEN 'Elternzeit' WHEN 'KRANKHEIT' THEN 'Krankheit'
+                        WHEN 'SONSTIGES' THEN 'Sonstiges' WHEN 'URLAUB' THEN 'Urlaub' ELSE 'Keine erfasste Abwesenheit' END
+                    """),
+            java.util.Map.entry("wochenstunden", "COALESCE(h.wochenstunden, m.wochenstunden)"));
     private static final String SUCHBEDINGUNG = """
             WHERE LOCATE(LOWER(:suche), LOWER(CONCAT_WS(' ', m.personalnummer, m.name,
-                m.titel, m.geburtsname, m.kuerzel, o.name, m.stelle,
+                m.titel, m.geburtsname, m.kuerzel, o.name, COALESCE(sp.name, m.stelle),
                 m.beschaeftigungsart))) > 0
             AND (:organisation IS NULL OR CASE WHEN h.id IS NULL THEN m.organisationseinheit_id ELSE h.organisationseinheit_id END = :organisation)
             AND (:beschaeftigung = 'ALLE' OR m.beschaeftigung = :beschaeftigung)
@@ -33,21 +52,22 @@ public class MitarbeiterRepository {
           AND h.gueltig_ab = COALESCE((SELECT MAX(h2.gueltig_ab) FROM mitarbeiter_historie h2 WHERE h2.mitarbeiter_id = m.id AND h2.gueltig_ab <= :stichtag),
                                      (SELECT MIN(h3.gueltig_ab) FROM mitarbeiter_historie h3 WHERE h3.mitarbeiter_id = m.id))
         LEFT JOIN organisationseinheit o ON o.id = CASE WHEN h.id IS NULL THEN m.organisationseinheit_id ELSE h.organisationseinheit_id END
+        LEFT JOIN personaldaten pd ON pd.mitarbeiter_id = m.id
+        LEFT JOIN stellenprofil sp ON sp.id = pd.profil_id
         """;
     private static final String SELECT = """
             SELECT m.id, m.name, COALESCE(h.wochenstunden, m.wochenstunden) AS wochenstunden,
             CASE WHEN :historisch THEN COALESCE(b.beginn, m.eintrittsdatum) ELSE m.eintrittsdatum END AS eintrittsdatum,
             m.version, m.personalnummer, m.titel, m.nachname, m.vorname, m.geburtsname, m.kuerzel,
-            m.geburtsdatum, CASE WHEN :historisch THEN COALESCE(b.ende, m.austrittsdatum) ELSE m.austrittsdatum END AS austrittsdatum, m.stelle, m.beschaeftigungsart,
+            m.geburtsdatum, CASE WHEN :historisch THEN COALESCE(b.ende, m.austrittsdatum) ELSE m.austrittsdatum END AS austrittsdatum, COALESCE(sp.name, m.stelle) AS stelle, m.beschaeftigungsart,
             CASE WHEN h.id IS NULL THEN m.organisationseinheit_id ELSE h.organisationseinheit_id END AS organisationseinheit_id,
             COALESCE(o.name, '') AS organisationseinheit,
             CASE WHEN h.gueltig_ab <= :stichtag OR (m.eintrittsdatum > :stichtag AND h.gueltig_ab = m.eintrittsdatum) THEN TRUE ELSE FALSE END AS historie_bekannt,
             h.gueltig_ab AS daten_gueltig_ab,
             m.beschaeftigungsstatus AS alt_beschaeftigungsstatus, m.abwesenheitsstatus AS alt_abwesenheitsstatus,
             m.beschaeftigung,
-            COALESCE((SELECT a.art FROM abwesenheit a
-                WHERE a.mitarbeiter_id = m.id AND a.beginn <= :stichtag AND a.ende >= :stichtag
-                ORDER BY a.id FETCH FIRST 1 ROW ONLY), '') AS abwesenheit_am_stichtag,
+            """ + ABWESENHEIT_AM_STICHTAG + """
+            AS abwesenheit_am_stichtag,
             CAST(:stichtag AS DATE) AS stichtag
             """;
     private final JdbcClient jdbc;

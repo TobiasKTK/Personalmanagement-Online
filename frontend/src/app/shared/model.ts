@@ -1,3 +1,6 @@
+export interface Stellenzuordnung { profilId: number | null; version: number; }
+export interface StellenzuordnungStand extends Stellenzuordnung { freitext: string; }
+
 export interface MitarbeiterEingabe {
   personalnummer: number | null;
   titel: string;
@@ -11,6 +14,7 @@ export interface MitarbeiterEingabe {
   organisationseinheit: string;
   organisationseinheitId?: number | null;
   stelle: string;
+  stellenzuordnung?: Stellenzuordnung;
   beschaeftigungsart: string;
   wochenstunden: number;
   version?: number;

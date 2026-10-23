@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { MitarbeiterApiService } from './mitarbeiter-api.service';
 import { ApiFehler } from '../shared/api-fehler';
 import { BESCHAEFTIGUNGSART, Mitarbeiter, MitarbeiterEingabe, Organisation } from '../shared/model';
+import { EntwicklungApi, Profil } from '../entwicklung/entwicklung-api.service';
 
 @Component({
   selector: 'app-mitarbeiter-editor',
@@ -13,6 +14,8 @@ import { BESCHAEFTIGUNGSART, Mitarbeiter, MitarbeiterEingabe, Organisation } fro
 })
 export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
   private readonly api = inject(MitarbeiterApiService);
+  private readonly entwicklung = inject(EntwicklungApi);
+  private profilVersion = 0;
   private readonly fb = inject(FormBuilder).nonNullable;
   private readonly destroyRef = inject(DestroyRef);
   private anfang!: ReturnType<typeof this.formular.getRawValue>;
@@ -25,6 +28,9 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
   readonly ergaenzen = output<Mitarbeiter>();
   readonly geschlossen = output<void>();
   readonly speichert = signal(false);
+  readonly profile = signal<Profil[]>([]);
+  readonly profileGeladen = signal(false);
+  readonly profilFehler = signal('');
   readonly fehler = signal('');
   readonly feldfehler = signal<Record<string, string>>({});
   readonly nummerHinweis = signal('Beim Speichern fest vergeben.');
@@ -41,6 +47,7 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
     wochenstunden: new FormControl<number | null>(null, [Validators.required, Validators.min(0.5), Validators.max(168)]),
     organisationseinheitId: new FormControl<number | null>(null),
     stelle: ['', Validators.maxLength(120)],
+    profilId: new FormControl<number | null>({ value: null, disabled: true }),
     beschaeftigungsart: ['', Validators.maxLength(80)],
   });
 
@@ -63,6 +70,30 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
       this.nummerHinweis.set('Die Personalnummer kann nach der Neuanlage nicht geändert werden.');
     }
     this.anfang = this.formular.getRawValue();
+    void this.profileLaden();
+  }
+
+  async profileLaden(): Promise<void> {
+    this.profilFehler.set('');
+    try {
+      const person = this.person();
+      const [profile, zuordnung] = await Promise.all([
+        this.entwicklung.laden<Profil[]>('profile'),
+        person ? firstValueFrom(this.api.stellenzuordnung(person.id)) : Promise.resolve({ profilId: null, version: 0, freitext: '' }),
+      ]);
+      if (this.destroyRef.destroyed) return;
+      this.profile.set(profile);
+      this.profilVersion = zuordnung.version;
+      this.formular.controls.profilId.setValue(zuordnung.profilId);
+      this.formular.controls.profilId.enable();
+      // Die Anzeige kann den Profilnamen enthalten; den hinterlegten Freitext separat erhalten.
+      this.formular.controls.stelle.setValue(zuordnung.freitext);
+      this.anfang.profilId = zuordnung.profilId;
+      this.anfang.stelle = zuordnung.freitext;
+      this.profileGeladen.set(true);
+    } catch {
+      if (!this.destroyRef.destroyed) this.profilFehler.set('Die Stellenprofile konnten nicht geladen werden. Bitte erneut versuchen.');
+    }
   }
 
   ngAfterViewInit(): void {
@@ -146,7 +177,10 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
   }
 
   async speichern(weitereDaten = false): Promise<void> {
-    if (this.speichert()) return;
+    if (this.speichert() || !this.profileGeladen()) {
+      this.navigationAbschliessen(false);
+      return;
+    }
     this.fehler.set('');
     this.feldfehler.set({});
     this.formular.markAllAsTouched();
@@ -171,6 +205,8 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
       organisationseinheit: '',
       organisationseinheitId: werte.organisationseinheitId,
       stelle: werte.stelle.trim(),
+      ...(werte.profilId !== this.anfang.profilId
+        ? { stellenzuordnung: { profilId: werte.profilId, version: this.profilVersion } } : {}),
       beschaeftigungsart: werte.beschaeftigungsart,
       ...(person ? { version: person.version, datenGueltigAb: person.datenGueltigAb } : {}),
     };

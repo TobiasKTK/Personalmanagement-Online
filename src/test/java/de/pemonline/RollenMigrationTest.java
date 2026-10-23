@@ -16,7 +16,7 @@ class RollenMigrationTest {
                 s.execute("INSERT INTO users VALUES ('alt','geschuetzt',TRUE)");
                 s.execute("INSERT INTO authorities VALUES ('alt','ROLE_PERSONAL')");
             }
-            var f = Flyway.configure().dataSource(url, "sa", "").schemas(schema).defaultSchema(schema).load();
+            var f = Flyway.configure().dataSource(url, "sa", "").schemas(schema).defaultSchema(schema).target("24").load();
             assertThat(f.migrate().migrationsExecuted).isEqualTo(1);
             try (var c = DriverManager.getConnection(url, "sa", ""); var s = c.createStatement()) {
                 c.setSchema(schema);

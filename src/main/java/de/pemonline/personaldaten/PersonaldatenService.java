@@ -55,6 +55,22 @@ public class PersonaldatenService {
         long gesamt = jdbc.sql("SELECT COUNT(*) FROM personaldaten_revision WHERE mitarbeiter_id = :id").param("id", person).query(Long.class).single();
         return new Historie(eintraege, gesamt);
     }
+    public StellenzuordnungStand stellenzuordnung(@Positive long person) {
+        return jdbc.sql("""
+                SELECT pd.profil_id, COALESCE(pd.version, 0) AS version, m.stelle AS freitext
+                FROM mitarbeiter m LEFT JOIN personaldaten pd ON pd.mitarbeiter_id = m.id
+                WHERE m.id = :id
+                """).param("id", person).query(StellenzuordnungStand.class).optional()
+                .orElseThrow(() -> fehlt("Mitarbeiter"));
+    }
+    /** Teil der Mitarbeitertransaktion; andere Aktenfelder bleiben unverändert. */
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void stelleZuordnen(@Positive long person, @NotNull @Valid Stellenzuordnung e) {
+        var m = sperren(person, e.version());
+        var d = daten(person).mitProfil(e.profilId());
+        pruefen(person, m, d);
+        persistieren(person, d);
+    }
     @Transactional
     public Akte speichern(@Positive long person, @NotNull @Valid Daten e) {
         var m = sperren(person, e.version());

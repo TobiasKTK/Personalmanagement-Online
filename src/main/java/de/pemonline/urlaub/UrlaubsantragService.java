@@ -7,6 +7,7 @@ import de.pemonline.verlauf.VerlaufService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.time.*;
+import java.util.List;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -238,22 +239,51 @@ public class UrlaubsantragService {
         verlauf.speichern(antrag.mitarbeiterId(), "ABWESENHEIT_GELOESCHT", buchung, null);
     }
 
+    /** Wird innerhalb der Abwesenheitslöschung unter derselben Mitarbeitersperre aufgerufen. */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    @PreAuthorize("hasAnyRole('PERSONAL', 'ADMIN')")
+    public void nachAbwesenheitsloeschung(Urlaubsantrag vorher, List<Abwesenheit> reste) {
+        var zuordnung = repository.zuordnung(vorher.mitarbeiterId()).orElseThrow();
+        if (reste.isEmpty()) {
+            if (!repository.entscheiden(vorher, "STORNIERT", angemeldeterKontoname(),
+                    "Urlaubsblock direkt gelöscht.", OffsetDateTime.now(clock), null)) throw konflikt();
+            var nachher = repository.finden(vorher.id()).orElseThrow();
+            verlauf.speichern(vorher.mitarbeiterId(), "URLAUB_STORNIERT", vorher, nachher);
+            entscheidungBenachrichtigen(nachher, zuordnung, "STORNIEREN");
+            return;
+        }
+        if (!repository.kuerzen(vorher, reste.getFirst())) throw konflikt();
+        var nachher = repository.finden(vorher.id()).orElseThrow();
+        verlauf.speichern(vorher.mitarbeiterId(), "URLAUB_GEKUERZT", vorher, nachher);
+        benachrichtigen(nachher, zuordnung, true, "Ein genehmigter Urlaub wurde durch Löschen eines Tages gekürzt. Bitte die verbleibenden Zeiträume prüfen.");
+        if (reste.size() == 2) {
+            long id = repository.restAnlegen(vorher, reste.get(1));
+            var zweiterRest = repository.finden(id).orElseThrow();
+            verlauf.speichern(vorher.mitarbeiterId(), "URLAUB_GETEILT", vorher, zweiterRest);
+            benachrichtigen(zweiterRest, zuordnung, true, "Nach dem Löschen eines Urlaubstags ist dieser genehmigte Restzeitraum entstanden.");
+        }
+    }
+
     private void entscheidungBenachrichtigen(Urlaubsantrag antrag, UrlaubZuordnung zuordnung, String aktion) {
-        var empfaenger = new java.util.HashSet<String>();
-        if (zuordnung.konto() != null) {
-            empfaenger.add(zuordnung.konto());
-        }
-        if (aktion.equals("ZURUECKZIEHEN") || aktion.equals("STORNIEREN")) {
-            empfaenger.addAll(repository.genehmiger(antrag.mitarbeiterId(), antrag.antragsteller()));
-        }
-        // Die handelnde Person kennt die eigene Entscheidung bereits.
-        empfaenger.remove(angemeldeterKontoname());
         String text = switch (antrag.status()) {
             case "GENEHMIGT" -> "Dein Urlaubsantrag wurde genehmigt.";
             case "ABGELEHNT" -> "Dein Urlaubsantrag wurde abgelehnt.";
             case "ZURUECKGEZOGEN" -> "Ein Urlaubsantrag wurde zurückgezogen.";
             default -> "Ein genehmigter Urlaub wurde storniert.";
         };
+        benachrichtigen(antrag, zuordnung, aktion.equals("ZURUECKZIEHEN") || aktion.equals("STORNIEREN"), text);
+    }
+
+    private void benachrichtigen(Urlaubsantrag antrag, UrlaubZuordnung zuordnung, boolean genehmigerInformieren, String text) {
+        var empfaenger = new java.util.HashSet<String>();
+        if (zuordnung.konto() != null) {
+            empfaenger.add(zuordnung.konto());
+        }
+        if (genehmigerInformieren) {
+            empfaenger.addAll(repository.genehmiger(antrag.mitarbeiterId(), antrag.antragsteller()));
+        }
+        // Die handelnde Person kennt die eigene Entscheidung bereits.
+        empfaenger.remove(angemeldeterKontoname());
         nachrichten.versenden(antrag, empfaenger, text);
     }
 

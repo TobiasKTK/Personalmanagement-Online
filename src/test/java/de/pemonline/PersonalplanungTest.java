@@ -352,6 +352,7 @@ class PersonalplanungTest {
         long mitarbeiterId = mitarbeiterAnlegen("Antrag");
         var mitarbeiterkonto = kontoAnlegenUndAnmelden("mitarbeiter", "PERSONAL");
         var genehmigerkonto = kontoAnlegenUndAnmelden("genehmiger", "PERSONAL");
+        var lesekonto = kontoAnlegenUndAnmelden("leser", "LESEN");
         kontoAnlegenUndAnmelden("fremder", "PERSONAL");
         urlaubskontoEinrichten(mitarbeiterId, 2026, 1);
         urlaubsfreigabeZuordnen(mitarbeiterId, "mitarbeiter", "ZUGEORDNET", "genehmiger", null);
@@ -374,7 +375,7 @@ class PersonalplanungTest {
         // Ausführung: Den reservierten Urlaub genehmigen
         var genehmigungsantwort = entscheiden(genehmigerkonto, antragId, "GENEHMIGEN", 0);
 
-        // Überprüfung: Die Buchung entsteht genau einmal und kann nur über den Antrag entfernt werden.
+        // Überprüfung: Die Buchung entsteht genau einmal; Lesekonten dürfen sie nicht direkt entfernen.
         var genehmigt = antwortPruefen(genehmigungsantwort, 200);
         var gebucht = urlaubsbestand();
         antwortPruefen(entscheiden(genehmigerkonto, antragId, "GENEHMIGEN", 0), 409);
@@ -383,8 +384,8 @@ class PersonalplanungTest {
         assertThat(urlaubskonto.get("beantragt").asDouble()).isZero();
         assertThat(urlaubskonto.get("geplant").asDouble()).isEqualTo(0.5);
         long abwesenheitId = genehmigt.get("abwesenheitId").asLong();
-        antwortPruefen(admin.senden("DELETE", "/api/mitarbeiter/" + mitarbeiterId + "/abwesenheiten/" + abwesenheitId + "?version=0", null), 409);
-        antwortPruefen(admin.senden("DELETE", "/api/mitarbeiter/" + mitarbeiterId + "/abwesenheiten/" + abwesenheitId + "/tage/2026-10-26?version=0", null), 409);
+        antwortPruefen(lesekonto.senden("DELETE", "/api/mitarbeiter/" + mitarbeiterId + "/abwesenheiten/" + abwesenheitId + "?version=0", null), 403);
+        antwortPruefen(lesekonto.senden("DELETE", "/api/mitarbeiter/" + mitarbeiterId + "/abwesenheiten/" + abwesenheitId + "/tage/2026-10-26?version=0", null), 403);
         gebucht.unveraendert(jdbc);
         // Ausführung und Überprüfung der anschließenden Stornierung
         antwortPruefen(entscheiden(mitarbeiterkonto, antragId, "STORNIEREN", 1), 200);

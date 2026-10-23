@@ -208,10 +208,29 @@
           </select>
           <span class="field-error" id="organisationseinheit-fehler">{{ feldFehler('organisationseinheitId') }}</span>
         </label>
+        <div class="field">
+          <label for="stellenprofil">Stelle (Stellenprofil)</label>
+          <select id="stellenprofil" formControlName="profilId" aria-describedby="stellenprofil-hinweis">
+            <option [ngValue]="null">Ohne Stellenprofil / Freitext</option>
+            @for (profil of profile(); track profil.id) {
+              <option [ngValue]="profil.id">{{ profil.name }}</option>
+            }
+          </select>
+          <span class="field-help" id="stellenprofil-hinweis">
+            @if (!profileGeladen() && !profilFehler()) { Stellenprofile werden geladen … }
+            @else if (profileGeladen() && !profile().length) { Noch keine Stellenprofile vorhanden. Profile unter „Stellen und Planstellen“ anlegen. }
+            @else { Verwendet dieselbe Zuordnung wie die Personalakte. }
+          </span>
+        </div>
+        @if (profilFehler()) {
+          <div role="alert"><p>{{ profilFehler() }}</p><button type="button" class="button secondary" (click)="profileLaden()">Stellenprofile erneut laden</button></div>
+        }
+        @if (formular.controls.profilId.value === null) {
         <label class="field" for="stelle"
-          >Stelle<input
+          >Stelle (Freitext)<input
             id="stelle"
             formControlName="stelle"
+            [readOnly]="!profileGeladen()"
             [attr.aria-invalid]="feldFehler('stelle') ? true : null"
             maxlength="120"
             placeholder="z. B. Geschäftsführer"
@@ -220,6 +239,7 @@
             feldFehler("stelle")
           }}</span></label
         >
+        }
         <label class="field" for="beschaeftigungsart"
           >Beschäftigungsart
           <select
@@ -263,12 +283,12 @@
         [class.secondary]="!person()"
         (click)="person() ? null : speichern()"
         id="speichern"
-        [disabled]="speichert()"
+        [disabled]="speichert() || !profileGeladen()"
       >
         {{ speichert() ? "Wird gespeichert …" : (person() ? "Mitarbeiter speichern" : "Nur Basisdaten speichern") }}
       </button>
       @if (!person()) {
-        <button type="submit" class="button primary" [disabled]="speichert()">{{ speichert() ? 'Wird gespeichert …' : 'Speichern und Daten ergänzen' }}</button>
+        <button type="submit" class="button primary" [disabled]="speichert() || !profileGeladen()">{{ speichert() ? 'Wird gespeichert …' : 'Speichern und Daten ergänzen' }}</button>
       }
     </div>
   </form>

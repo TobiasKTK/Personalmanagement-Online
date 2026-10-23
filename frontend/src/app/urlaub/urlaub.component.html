@@ -1,6 +1,6 @@
 <section class="team-panel administration" aria-label="Urlaub und Freigaben">
   <h1>Urlaub und Freigaben</h1>
-  @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+  @if (fehler() && !entscheidung) { <p class="banner error" role="alert">{{ fehler() }}</p> }
   @if (meldung()) { <p role="status">{{ meldung() }}</p> }
   @if (arbeitet()) { <p role="status">Daten werden verarbeitet …</p> }
   @if (profil(); as p) {
@@ -16,12 +16,13 @@
       <button class="button primary">Urlaubsantrag einreichen</button>
     </div></fieldset></form>
   } @else if (!arbeitet()) { <p>Zum Beantragen von Urlaub muss die Administration dein Konto im Mitarbeiterdialog zuordnen und dein Urlaubskonto einrichten.</p> }
-  <h2>{{ freigaben ? 'Anträge zur Freigabe' : 'Meine Anträge' }}</h2>
+  <h2 #antragslisteTitel tabindex="-1">{{ freigaben ? 'Anträge zur Freigabe' : 'Meine Anträge' }}</h2>
   @if (fokusId) { <p>Geöffneter Antrag aus einer Benachrichtigung. <button class="button secondary compact" [disabled]="arbeitet()" (click)="laden(true)">Alle Anträge anzeigen</button></p> }
   <form class="filter-grid" (ngSubmit)="laden(true)"><fieldset [disabled]="arbeitet()"><legend>Anträge filtern</legend>
-    @if (sitzung()?.rolle === 'PERSONAL' || sitzung()?.rolle === 'ADMIN' || sitzung()?.rolle === 'TEAMLEITUNG') { <label><input type="checkbox" name="freigaben" [(ngModel)]="freigaben"> Zuständige Freigaben anzeigen</label> }
-    <label class="field">Status<select name="status" [(ngModel)]="status"><option value="ALLE">Alle Status</option><option value="BEANTRAGT">Beantragt</option><option value="GENEHMIGT">Genehmigt</option><option value="ABGELEHNT">Abgelehnt</option><option value="ZURUECKGEZOGEN">Zurückgezogen</option><option value="STORNIERT">Storniert</option></select></label>
+    @if (sitzung()?.rolle === 'PERSONAL' || sitzung()?.rolle === 'ADMIN' || sitzung()?.rolle === 'TEAMLEITUNG') { <label><input type="checkbox" name="freigaben" [(ngModel)]="filter.freigaben"> Zuständige Freigaben anzeigen</label> }
+    <label class="field">Status<select name="status" [(ngModel)]="filter.status"><option value="ALLE">Alle Status</option><option value="BEANTRAGT">Beantragt</option><option value="GENEHMIGT">Genehmigt</option><option value="ABGELEHNT">Abgelehnt</option><option value="ZURUECKGEZOGEN">Zurückgezogen</option><option value="STORNIERT">Storniert</option></select></label>
     <button class="button secondary">Anträge anzeigen</button>
+    @if (filter.freigaben !== freigaben || filter.status !== status) { <p role="status">Filter geändert. Mit „Anträge anzeigen“ übernehmen.</p> }
   </fieldset></form>
   <ul class="antrags-kacheln" aria-label="Urlaubsanträge">
     @for (a of antraege(); track a.id) {
@@ -43,7 +44,7 @@
           </div>
         }
       </li>
-    } @empty { <li class="antraege-leer">Keine Anträge für diese Auswahl.</li> }
+    } @empty { <li class="antraege-leer">{{ arbeitet() ? 'Anträge werden geladen …' : fehler() ? 'Anträge konnten nicht geladen werden. Bitte erneut anzeigen.' : 'Keine Anträge für diese Auswahl.' }}</li> }
   </ul>
   <dialog #antragsdialog class="antragsdialog" aria-labelledby="antragsdialog-titel" (close)="detailAntrag.set(null)">
     <div class="dialog-heading">
@@ -67,8 +68,16 @@
       </div>
     }
   </dialog>
-  @if (entscheidung; as e) {
-    <form (ngSubmit)="entscheiden()"><fieldset [disabled]="arbeitet()"><legend>{{ e.aktion }} · {{ e.antrag.name }} · {{ e.antrag.beginn | date:'dd.MM.yyyy' }}</legend>
+  <dialog #entscheidungsdialog class="entscheidungsdialog" aria-labelledby="entscheidung-titel" aria-describedby="entscheidung-kontext" (cancel)="entscheidungAbbrechen($event)">
+    @if (entscheidung; as e) {
+    <div class="dialog-heading">
+      <h2 id="entscheidung-titel">{{ entscheidungsTitel[e.aktion] }}</h2>
+      <button type="button" class="button secondary" autofocus [disabled]="arbeitet()" (click)="entscheidungAbbrechen()">Abbrechen</button>
+    </div>
+    <p id="entscheidung-kontext" class="dialog-description"><strong>{{ e.antrag.name }}</strong><br>{{ e.antrag.beginn | date:'dd.MM.yyyy' }} – {{ e.antrag.ende | date:'dd.MM.yyyy' }}{{ e.antrag.halberTag ? ' · ½ Tag' : '' }}</p>
+    @if (fehler()) { <p class="banner error" role="alert">{{ fehler() }}</p> }
+    @if (arbeitet()) { <p role="status">Daten werden verarbeitet …</p> }
+    <form (ngSubmit)="entscheiden()"><div class="entscheidung-inhalt"><fieldset [disabled]="arbeitet()"><legend>Entscheidung prüfen</legend>
       @if (e.besetzung; as b) {
         <h3>Besetzung prüfen</h3>
         @for (hinweis of b.hinweise; track hinweis) { <p>{{ hinweis }}</p> }
@@ -77,12 +86,14 @@
           <ul>@for (w of b.warnungen; track w.datum) { <li>{{ w.datum | date:'dd.MM.yyyy' }} · {{ w.organisation }}: {{ w.vorher }} → {{ w.danach }} verfügbar, mindestens {{ w.mindestbesetzung }} erforderlich.</li> }</ul>
           <label><input type="checkbox" name="warnungBestaetigt" [(ngModel)]="e.warnungBestaetigt" required> Trotz Besetzungswarnung genehmigen</label>
         } @else { <p>Keine Unterschreitung der eingerichteten Mindestbesetzung ermittelt.</p> }
-        <button type="button" class="button secondary" (click)="vorbereiten(e.antrag, e.aktion)">Besetzung neu prüfen</button>
-        <p>Berechnung nach Tagesanteilen und den hinterlegten Arbeitstagen, Feiertagen und Abwesenheiten. Keine Schicht- oder Qualifikationsplanung.</p>
+        <details><summary>Grundlage der Besetzungsprüfung</summary><p>Berechnung nach Tagesanteilen und den hinterlegten Arbeitstagen, Feiertagen und Abwesenheiten. Keine Schicht- oder Qualifikationsplanung.</p></details>
       }
+      @if (e.aktion === 'GENEHMIGEN') { <button type="button" class="button secondary" (click)="besetzungPruefen()">Besetzung neu prüfen</button> }
       <label class="field">Begründung (optional)<textarea name="begruendung" [(ngModel)]="e.begruendung" maxlength="500"></textarea></label>
-      <button class="button primary" [disabled]="!!e.besetzung?.warnungen?.length && !e.warnungBestaetigt">Entscheidung bestätigen</button><button type="button" class="button secondary" (click)="entscheidung = null">Abbrechen</button>
-    </fieldset></form>
-  }
+    </fieldset></div>
+      <div class="dialog-footer"><button class="button primary" [disabled]="arbeitet() || (e.aktion === 'GENEHMIGEN' && (!e.besetzung || (!!e.besetzung.warnungen.length && !e.warnungBestaetigt)))">Entscheidung bestätigen</button></div>
+    </form>
+    }
+  </dialog>
   <div class="pagination"><span>{{ gesamt() }} Anträge · Seite {{ seite + 1 }}</span><div><button class="page-button" aria-label="Vorherige Antragsseite" [disabled]="seite === 0 || arbeitet()" (click)="seite = seite - 1; laden()">←</button><button class="page-button" aria-label="Nächste Antragsseite" [disabled]="(seite + 1) * 20 >= gesamt() || arbeitet()" (click)="seite = seite + 1; laden()">→</button></div></div>
 </section>

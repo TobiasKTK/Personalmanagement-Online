@@ -41,7 +41,7 @@ public class PersonaldokumentController {
     @PutMapping("/{id}/freigabe") public Dokument freigeben(@PathVariable @Positive long person, @PathVariable @Positive long id,
             @RequestBody @jakarta.validation.Valid Freigabe e) { return service.freigeben(person, id, e); }
     private byte[] pdf(MultipartFile datei) throws IOException {
-        if (datei.getSize() > 5242880) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "PDF-Dateien dürfen höchstens 5 MiB groß sein.");
+        if (datei.getSize() > 5242880) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONTENT_TOO_LARGE, "PDF-Dateien dürfen höchstens 5 MiB groß sein.");
         return datei.getBytes();
     }
 }

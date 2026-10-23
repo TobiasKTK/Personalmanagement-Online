@@ -28,6 +28,68 @@ async function monatAnzeigen(page: Page, monat = '2026-12') {
   await expect(page.locator('.kalender caption')).toHaveText(`Abwesenheiten ${monat}`);
 }
 
+for (const rolle of ['ADMIN', 'PERSONAL']) {
+test(`${rolle} löscht genehmigten Urlaub tageweise und als Block`, async ({ page, request, browser, baseURL }, testInfo) => {
+  const person = await personAnlegen(request);
+  const name = `kalender-antrag-${rolle.toLowerCase()}`;
+  const passwort = 'Isolierte-Urlaubsloeschung-2030!';
+  expect((await request.post('/api/konten', { data: { name, passwort, rolle: 'LESEN', aktiv: true } })).status()).toBe(201);
+  expect((await request.put(`/api/mitarbeiter/${person.id}/urlaubsfreigabe`, { data: { konto: name, modus: 'ALLE' } })).status()).toBe(200);
+  expect((await request.put(`/api/mitarbeiter/${person.id}/urlaubskonto/2030`, { data: {
+    anspruch: 30, uebertrag: 0, arbeitstage: [1, 2, 3, 4, 5], feiertage: [],
+  } })).status()).toBe(200);
+  const eigenerKontext = await browser.newContext({ baseURL });
+  const personalKontext = rolle === 'PERSONAL' ? await browser.newContext({ baseURL }) : null;
+  try {
+    const eigeneSeite = await eigenerKontext.newPage();
+    await eigeneSeite.goto('/login');
+    await eigeneSeite.locator('#kontoname').fill(name);
+    await eigeneSeite.locator('#passwort').fill(passwort);
+    await eigeneSeite.locator('#anmelden').click();
+    await eigeneSeite.getByRole('button', { name: 'Urlaub und Freigaben', exact: true }).click();
+    await eigeneSeite.getByLabel('Beginn', { exact: true }).fill('2030-12-02');
+    await eigeneSeite.getByLabel('Ende', { exact: true }).fill('2030-12-04');
+    await eigeneSeite.getByRole('button', { name: 'Urlaubsantrag einreichen' }).click();
+    await expect(eigeneSeite.getByText('Urlaubsantrag eingereicht.', { exact: true })).toBeVisible();
+    const antrag = (await (await request.get('/api/urlaub/antraege?freigaben=true&status=BEANTRAGT')).json()).eintraege[0];
+    expect((await request.post(`/api/urlaub/antraege/${antrag.id}/entscheidung`, { data: { aktion: 'GENEHMIGEN', version: antrag.version } })).status()).toBe(200);
+
+    if (personalKontext) {
+      expect((await request.post('/api/konten', { data: { name: 'kalender-loeschpersonal', passwort, rolle, aktiv: true } })).status()).toBe(201);
+      page = await personalKontext.newPage();
+      await page.goto('/login');
+      await page.locator('#kontoname').fill('kalender-loeschpersonal');
+      await page.locator('#passwort').fill(passwort);
+      await page.locator('#anmelden').click();
+      await expect(page.getByRole('heading', { name: 'Startübersicht', exact: true })).toBeVisible();
+    }
+    const browserfehler: string[] = [];
+    page.on('pageerror', e => browserfehler.push(e.message));
+    await monatAnzeigen(page, '2030-12');
+    await page.getByRole('button', { name: 'Anna Kalendertest: Urlaub am 02.12.2030', exact: true }).click();
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: 'Tag löschen', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Abwesenheit am 02.12.2030 gelöscht.' })).toBeVisible();
+    await expect(page.locator('.kalender tbody td.URLAUB')).toHaveCount(2);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    const gekuerzt = (await (await request.get(`/api/urlaub/antraege/${antrag.id}`)).json()).antrag;
+    expect(gekuerzt).toMatchObject({ status: 'GENEHMIGT', beginn: '2030-12-03', ende: '2030-12-04' });
+    await page.screenshot({ path: testInfo.outputPath('genehmigter-urlaub-gekuerzt.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Anna Kalendertest: Urlaub am 03.12.2030', exact: true }).click();
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: 'Gesamten Block löschen', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Abwesenheit gelöscht.' })).toBeVisible();
+    await expect(page.locator('.kalender tbody td.URLAUB')).toHaveCount(0);
+    expect((await (await request.get(`/api/urlaub/antraege/${antrag.id}`)).json()).antrag.status).toBe('STORNIERT');
+    expect((await (await request.get(`/api/mitarbeiter/${person.id}/urlaubskonto/2030`)).json()).verfuegbar).toBe(30);
+    expect(browserfehler).toEqual([]);
+  } finally {
+    await eigenerKontext.close();
+    await personalKontext?.close();
+  }
+});
+}
+
 test('Monatspfeile wechseln über den Jahreswechsel und erhalten Filter bei Rückkehr zur ersten Seite', async ({ page, request }) => {
   const orgAntwort = await request.post('/api/organisationseinheiten', { data: { name: 'Kalenderteam' } });
   expect(orgAntwort.status()).toBe(201);
@@ -106,7 +168,7 @@ test('Markierter Urlaub wird vollständig und erst nach Bestätigung gelöscht',
   await auswahl.getByRole('button', { name: 'Gesamten Block löschen', exact: true }).click();
   expect((await geloescht).status()).toBe(204);
   await expect(auswahl).toHaveCount(0);
-  await expect(page.getByRole('status')).toContainText('Abwesenheit gelöscht.');
+  await expect(page.getByRole('status').filter({ hasText: 'Abwesenheit gelöscht.' })).toBeVisible();
   await expect(tag).toHaveCount(0);
   const rest = await (await request.get(`/api/mitarbeiter/${person.id}/abwesenheiten`)).json();
   expect(rest.gesamt).toBe(1);
@@ -139,7 +201,7 @@ test('Einzelnen Tag im Block auswählen und löschen erhält alle übrigen Tage 
   expect((await (await request.get(`/api/mitarbeiter/${person.id}/abwesenheiten`)).json()).gesamt).toBe(1);
   page.once('dialog', dialog => dialog.accept());
   await auswahl.getByRole('button', { name: 'Tag löschen', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Abwesenheit am 31.12.2026 gelöscht.');
+  await expect(page.getByRole('status').filter({ hasText: 'Abwesenheit am 31.12.2026 gelöscht.' })).toBeVisible();
   await expect(tag).toHaveCount(0);
   await expect(ersterTag).toBeVisible();
   await expect(page.getByLabel('Monatsübersicht, horizontal scrollbar', { exact: true })).toBeFocused();
@@ -219,7 +281,7 @@ test('Nach erfolgreichem Löschen und fehlgeschlagener Aktualisierung sind Wiede
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Gesamten Block löschen', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('Kalender vorübergehend nicht erreichbar.');
-  await expect(page.getByRole('status')).toHaveText('Abwesenheit gelöscht.');
+  await expect(page.getByRole('status').filter({ hasText: 'Abwesenheit gelöscht.' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Markierte Abwesenheit' })).toHaveCount(0);
   await expect(tag).toHaveCount(0);
   await expect(page.getByRole('searchbox', { name: 'Mitarbeiter suchen' })).toBeVisible();

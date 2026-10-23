@@ -8,6 +8,8 @@ import jakarta.validation.constraints.*;
 import jakarta.validation.Valid;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,9 +27,12 @@ public class AbwesenheitService {
     private final VerlaufService verlauf;
     private final de.pemonline.urlaub.UrlaubskontoService urlaub;
     private final de.pemonline.urlaub.UrlaubsantragRepository antraege;
+    private final de.pemonline.urlaub.UrlaubsantragService antragsService;
     public AbwesenheitService(AbwesenheitRepository repository, MitarbeiterRepository mitarbeiter, VerlaufService verlauf, Clock clock,
             de.pemonline.urlaub.UrlaubskontoService urlaub,
-            de.pemonline.urlaub.UrlaubsantragRepository antraege) {
+            de.pemonline.urlaub.UrlaubsantragRepository antraege,
+            de.pemonline.urlaub.UrlaubsantragService antragsService) {
+        this.antragsService = antragsService;
         this.antraege = antraege;
         this.urlaub = urlaub;
         this.repository = repository; this.clock = clock; this.mitarbeiter = mitarbeiter; this.verlauf = verlauf;
@@ -65,7 +70,6 @@ public class AbwesenheitService {
     public void tagLoeschen(@Positive long person, @Positive long id, @PositiveOrZero long version, @NotNull LocalDate tag) {
         if (!mitarbeiter.sperren(person)) throw new FachlicherFehler(NICHT_GEFUNDEN, "Mitarbeiter nicht gefunden.");
         var vorher = finden(person, id);
-        if (antraege.gebundeneAbwesenheit(id)) throw new FachlicherFehler(KONFLIKT, "Genehmigten Urlaub über den Antrag stornieren.");
         if (vorher.version() != version) throw new FachlicherFehler(KONFLIKT, "Abwesenheit wurde inzwischen geändert.");
         if (tag.isBefore(vorher.beginn()) || tag.isAfter(vorher.ende()))
             throw new FachlicherFehler(UNGUELTIG, "Der Tag liegt außerhalb der Abwesenheit.");
@@ -73,26 +77,34 @@ public class AbwesenheitService {
             loeschen(person, id, version);
             return;
         }
+        var antrag = antraege.genehmigtFuerAbwesenheit(id);
+        var reste = new ArrayList<Abwesenheit>();
         // Die ursprüngliche ID bleibt am ersten Restblock; ein zweiter entsteht nur bei einer Teilung.
         var beginn = tag.equals(vorher.beginn()) ? tag.plusDays(1) : vorher.beginn();
         var ende = tag.equals(vorher.beginn()) ? vorher.ende() : tag.minusDays(1);
         var rest = new AbwesenheitEingabe(vorher.art(), beginn, ende, version, vorher.halberTag());
         if (!repository.aendern(person, id, rest)) throw new FachlicherFehler(KONFLIKT, "Abwesenheit wurde inzwischen geändert.");
-        verlauf.speichern(person, "ABWESENHEIT_GEAENDERT", vorher, finden(person, id));
+        var ersterRest = finden(person, id);
+        reste.add(ersterRest);
+        verlauf.speichern(person, "ABWESENHEIT_GEAENDERT", vorher, ersterRest);
         if (tag.isAfter(vorher.beginn()) && tag.isBefore(vorher.ende())) {
             long zweiterRest = repository.anlegen(person,
                     new AbwesenheitEingabe(vorher.art(), tag.plusDays(1), vorher.ende(), null, vorher.halberTag()));
-            verlauf.speichern(person, "ABWESENHEIT_ANGELEGT", null, finden(person, zweiterRest));
+            var zweiteBuchung = finden(person, zweiterRest);
+            reste.add(zweiteBuchung);
+            verlauf.speichern(person, "ABWESENHEIT_ANGELEGT", null, zweiteBuchung);
         }
+        antrag.ifPresent(a -> antragsService.nachAbwesenheitsloeschung(a, reste));
     }
     @Transactional
     @PreAuthorize("hasAnyRole('PERSONAL', 'ADMIN')")
     public void loeschen(@Positive long person, @Positive long id, @PositiveOrZero long version) {
         if (!mitarbeiter.sperren(person)) throw new FachlicherFehler(NICHT_GEFUNDEN, "Mitarbeiter nicht gefunden.");
         var vorher = finden(person, id);
-        if (antraege.gebundeneAbwesenheit(id)) throw new FachlicherFehler(KONFLIKT, "Genehmigten Urlaub über den Antrag stornieren.");
+        var antrag = antraege.genehmigtFuerAbwesenheit(id);
         if (!repository.loeschen(person, id, version))
             throw new FachlicherFehler(KONFLIKT, "Abwesenheit wurde inzwischen geändert.");
         verlauf.speichern(person, "ABWESENHEIT_GELOESCHT", vorher, null);
+        antrag.ifPresent(a -> antragsService.nachAbwesenheitsloeschung(a, List.of()));
     }
 }

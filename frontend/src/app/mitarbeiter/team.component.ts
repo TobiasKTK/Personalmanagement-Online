@@ -39,6 +39,22 @@ export class TeamComponent implements OnInit {
   readonly fristZiel = signal({ bereich: '', datensatz: '' });
 
   readonly groesse = 10;
+  readonly sortierSpalten = [
+    { wert: 'personalnummer', titel: 'Personal-Nr.' },
+    { wert: 'titel', titel: 'Titel' },
+    { wert: 'nachname', titel: 'Nachname' },
+    { wert: 'vorname', titel: 'Vorname' },
+    { wert: 'geburtsname', titel: 'Geburtsname' },
+    { wert: 'kuerzel', titel: 'Kürzel' },
+    { wert: 'geburtsdatum', titel: 'Geburtsdatum' },
+    { wert: 'eintrittsdatum', titel: 'Eintrittsdatum' },
+    { wert: 'austrittsdatum', titel: 'Austrittsdatum' },
+    { wert: 'organisationseinheit', titel: 'Org.-Einheit' },
+    { wert: 'stelle', titel: 'Stelle' },
+    { wert: 'beschaeftigungsart', titel: 'Beschäftigungsart / Beschäftigung' },
+    { wert: 'abwesenheitAmStichtag', titel: 'Abwesenheit am Stichtag' },
+    { wert: 'wochenstunden', titel: 'Wochenstunden' },
+  ];
   readonly seite = signal(0);
   readonly suche = signal('');
   readonly eintraege = signal<Mitarbeiter[]>([]);
@@ -54,7 +70,7 @@ export class TeamComponent implements OnInit {
   organisationId = '';
   beschaeftigung = 'ALLE';
   stichtag = heutigesDatum();
-  sortierung = 'nachname';
+  sortierung = 'personalnummer';
   richtung = 'ASC';
   readonly laedt = signal(true);
   readonly ladefehler = signal('');
@@ -84,7 +100,7 @@ export class TeamComponent implements OnInit {
       this.organisationId = p.get('organisationseinheitId') ?? '';
       this.beschaeftigung = p.get('beschaeftigung') ?? 'ALLE';
       this.stichtag = p.get('stichtag') ?? heutigesDatum();
-      this.sortierung = p.get('sortierung') ?? 'nachname';
+      this.sortierung = p.get('sortierung') ?? 'personalnummer';
       this.richtung = p.get('richtung') ?? 'ASC';
       const seite = Number(p.get('seite') ?? 0);
       this.seite.set(Number.isSafeInteger(seite) && seite >= 0 ? seite : 0);
@@ -150,9 +166,17 @@ export class TeamComponent implements OnInit {
       ...(this.organisationId ? { organisationseinheitId: Number(this.organisationId) } : {}) };
   }
   filterAendern(): void { clearTimeout(this.suchTimer); this.seite.set(0); void this.urlAktualisieren(); }
+  spalteSortieren(spalte: string): void {
+    this.richtung = this.sortierung === spalte && this.richtung === 'ASC' ? 'DESC' : 'ASC';
+    this.sortierung = spalte;
+    this.filterAendern();
+  }
+  ariaSortierung(spalte: string): 'ascending' | 'descending' | null {
+    return this.sortierung === spalte ? (this.richtung === 'ASC' ? 'ascending' : 'descending') : null;
+  }
   zuruecksetzen(): void {
     this.suche.set(''); this.organisationId = ''; this.beschaeftigung = 'ALLE';
-    this.stichtag = heutigesDatum(); this.sortierung = 'nachname'; this.richtung = 'ASC'; this.filterAendern();
+    this.stichtag = heutigesDatum(); this.sortierung = 'personalnummer'; this.richtung = 'ASC'; this.filterAendern();
   }
   hatFilter(): boolean { return !!this.suche() || !!this.organisationId || this.beschaeftigung !== 'ALLE'; }
 

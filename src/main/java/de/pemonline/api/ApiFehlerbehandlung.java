@@ -40,7 +40,7 @@ public class ApiFehlerbehandlung {
 
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiFehler> dateiZuGross() {
-        return antwort(HttpStatus.PAYLOAD_TOO_LARGE, "PDF-Dateien dürfen höchstens 5 MiB groß sein.");
+        return antwort(HttpStatus.CONTENT_TOO_LARGE, "PDF-Dateien dürfen höchstens 5 MiB groß sein.");
     }
 
     @ExceptionHandler({ConstraintViolationException.class, MethodArgumentTypeMismatchException.class,

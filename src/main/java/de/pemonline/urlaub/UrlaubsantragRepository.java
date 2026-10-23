@@ -48,6 +48,26 @@ public class UrlaubsantragRepository {
     public boolean gebundeneAbwesenheit(long id) {
         return jdbc.sql("SELECT COUNT(*) FROM urlaubsantrag WHERE abwesenheit_id = :id AND status = 'GENEHMIGT'").param("id", id).query(Long.class).single() > 0;
     }
+    public Optional<Urlaubsantrag> genehmigtFuerAbwesenheit(long id) {
+        return jdbc.sql(SELECT + " WHERE a.abwesenheit_id = :id AND a.status = 'GENEHMIGT'")
+            .param("id", id).query(Urlaubsantrag.class).optional();
+    }
+    public boolean kuerzen(Urlaubsantrag antrag, de.pemonline.abwesenheit.Abwesenheit rest) {
+        return jdbc.sql("UPDATE urlaubsantrag SET beginn = :beginn, ende = :ende, version = version + 1 WHERE id = :id AND version = :version AND status = 'GENEHMIGT'")
+            .param("beginn", rest.beginn()).param("ende", rest.ende()).param("id", antrag.id()).param("version", antrag.version()).update() == 1;
+    }
+    public long restAnlegen(Urlaubsantrag ursprung, de.pemonline.abwesenheit.Abwesenheit rest) {
+        var key = new GeneratedKeyHolder();
+        // Die zweite Buchung behält Antragsteller, Notiz und ursprüngliche Freigabe; es ist kein neuer Antrag zur Prüfung.
+        jdbc.sql("""
+            INSERT INTO urlaubsantrag (mitarbeiter_id, antragsteller, beginn, ende, halber_tag, status, notiz,
+                entscheidung, bearbeiter, erstellt, entschieden, abwesenheit_id)
+            SELECT mitarbeiter_id, antragsteller, :beginn, :ende, halber_tag, 'GENEHMIGT', notiz,
+                entscheidung, bearbeiter, erstellt, entschieden, :abwesenheit FROM urlaubsantrag WHERE id = :id
+            """).param("beginn", rest.beginn()).param("ende", rest.ende()).param("abwesenheit", rest.id())
+            .param("id", ursprung.id()).update(key, "id");
+        return key.getKey().longValue();
+    }
     public boolean teamGenehmiger(String name, long person) {
         return jdbc.sql("SELECT COUNT(*) FROM users u JOIN authorities r ON r.username=u.username JOIN VERWALTUNG.konto k ON k.username=u.username WHERE u.username=:konto AND u.enabled=TRUE AND k.enabled=TRUE AND r.authority='ROLE_TEAMLEITUNG' AND "
                 + de.pemonline.sicherheit.TeamService.zustandigSql(":person", "u.username"))

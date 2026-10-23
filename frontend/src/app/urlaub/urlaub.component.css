@@ -25,3 +25,10 @@
 .antragsdetails dt { font-size: .875rem; color: var(--muted); }
 .antragsdetails dd { margin: var(--space-1) 0 0; }
 .antrag-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.entscheidungsdialog { width: min(40rem, calc(100% - 32px)); overflow-wrap: anywhere; }
+.entscheidungsdialog[open], .entscheidungsdialog form { display: flex; flex-direction: column; }
+.entscheidungsdialog form { min-height: 0; }
+.entscheidungsdialog .dialog-heading { flex-wrap: wrap; flex-shrink: 0; }
+.entscheidung-inhalt { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.entscheidungsdialog .dialog-footer { flex-shrink: 0; }
+.entscheidungsdialog textarea { min-height: 6rem; }

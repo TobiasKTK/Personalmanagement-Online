@@ -77,6 +77,80 @@ class ErweiterungenTest {
         for (String parameter : List.of("sortierung=name;DROP", "richtung=INVALID", "beschaeftigung=falsch", "stichtag=0000-01-01", "stichtag=2026-02-30", "organisationseinheitId=-1"))
             assertThat(admin.senden("GET", "/api/mitarbeiter?" + parameter, null).statusCode()).as(parameter).isEqualTo(400);
     }
+    @Test void personenauswahlSortiertNachNachnameDannVornameUndId() throws Exception {
+        var z = anlegen(person("Zimmer", "2020-01-01", null, null).put("vorname", "Anna"));
+        var b = anlegen(person("Becker", "2020-01-01", null, null).put("vorname", "Zoe"));
+        var a = anlegen(person("Becker", "2020-01-01", null, null).put("vorname", "anna"));
+        var gleich = anlegen(person("Becker", "2020-01-01", null, null).put("vorname", "Anna"));
+        var personen = lesen(admin.senden("GET", "/api/entwicklung/personen", null), 200);
+        assertThat(personen).extracting(p -> p.get("id").asLong())
+                .containsExactly(a.get("id").asLong(), gleich.get("id").asLong(), b.get("id").asLong(), z.get("id").asLong());
+    }
+
+    @Test void alleTeamspaltenSortierenVorDerSeitennavigationInBeideRichtungen() throws Exception {
+        long zOrg = org("Zentrale"), aOrg = org("Abteilung");
+        var z = anlegen(person("Zimmer", "2021-01-01", "2028-01-01", zOrg).put("personalnummer", 100)
+                .put("titel", "Prof.").put("vorname", "Zoe").put("geburtsname", "Zander").put("kuerzel", "ZZ")
+                .put("geburtsdatum", "1990-01-01").put("stelle", "Verwaltung").put("beschaeftigungsart", "Vollzeit").put("wochenstunden", 40));
+        var a = anlegen(person("Adler", "2020-01-01", "2027-01-01", aOrg).put("personalnummer", 9)
+                .put("titel", "Dr.").put("vorname", "Anna").put("geburtsname", "Anton").put("kuerzel", "AA")
+                .put("geburtsdatum", "1980-01-01").put("stelle", "Entwicklung").put("beschaeftigungsart", "Teilzeit").put("wochenstunden", 20));
+        lesen(admin.senden("POST", "/api/mitarbeiter/" + z.get("id").asLong() + "/abwesenheiten",
+                "{\"art\":\"URLAUB\",\"beginn\":\"2026-10-19\",\"ende\":\"2026-10-19\"}"), 201);
+        lesen(admin.senden("POST", "/api/mitarbeiter/" + a.get("id").asLong() + "/abwesenheiten",
+                "{\"art\":\"ELTERNZEIT\",\"beginn\":\"2026-10-19\",\"ende\":\"2026-10-19\"}"), 201);
+        for (String spalte : List.of("personalnummer", "titel", "nachname", "vorname", "geburtsname", "kuerzel", "geburtsdatum",
+                "eintrittsdatum", "austrittsdatum", "organisationseinheit", "stelle", "beschaeftigungsart", "abwesenheitAmStichtag", "wochenstunden")) {
+            for (String richtung : List.of("ASC", "DESC")) {
+                var erwartet = richtung.equals("ASC") ? List.of(a, z) : List.of(z, a);
+                for (int seite = 0; seite < 2; seite++) {
+                    var liste = lesen(admin.senden("GET", "/api/mitarbeiter?stichtag=2026-10-19&groesse=1&sortierung="
+                            + spalte + "&richtung=" + richtung + "&seite=" + seite, null), 200);
+                    assertThat(liste.get("gesamt").asInt()).isEqualTo(2);
+                    assertThat(liste.get("mitarbeiter").get(0).get("id").asLong()).as(spalte + " " + richtung + " Seite " + seite)
+                            .isEqualTo(erwartet.get(seite).get("id").asLong());
+                }
+            }
+        }
+    }
+
+    @Test void abwesenheitssortierungFunktioniertMitSucheUndOhneAbwesenheit() throws Exception {
+        var ohne = anlegen(person("Gefiltert", "2020-01-01", null, null));
+        var krank = anlegen(person("Gefiltert", "2020-01-01", null, null));
+        lesen(admin.senden("POST", "/api/mitarbeiter/" + krank.get("id").asLong() + "/abwesenheiten",
+                "{\"art\":\"KRANKHEIT\",\"beginn\":\"2026-10-19\",\"ende\":\"2026-10-19\"}"), 201);
+        var repository = new de.pemonline.mitarbeiter.MitarbeiterRepository(jdbc);
+        for (String richtung : List.of("ASC", "DESC")) {
+            var liste = repository.suchen(new de.pemonline.mitarbeiter.MitarbeiterFilter("Gefiltert", null, null,
+                    java.time.LocalDate.of(2026, 10, 19), "abwesenheitAmStichtag", richtung), 0, 10);
+            assertThat(liste).extracting(mitarbeiter -> mitarbeiter.id())
+                    .containsExactlyElementsOf((richtung.equals("ASC") ? List.of(ohne, krank) : List.of(krank, ohne))
+                            .stream().map(p -> p.get("id").asLong()).toList());
+        }
+    }
+
+    @Test void datumssortierungNutztAngezeigteHistorischeZeitenUndLeereWerteZuletzt() throws Exception {
+        var wieder = anlegen(person("Wieder", "2025-01-01", null, null));
+        var andere = anlegen(person("Andere", "2020-06-01", "2022-01-01", null).put("geburtsdatum", "1990-01-01"));
+        lesen(admin.senden("POST", "/api/mitarbeiter/" + wieder.get("id").asLong() + "/personaldaten/beschaeftigungszeiten",
+                "{\"beginn\":\"2019-01-01\",\"ende\":\"2021-12-31\",\"version\":0}"), 201);
+        for (String spalte : List.of("eintrittsdatum", "austrittsdatum")) {
+            for (String richtung : List.of("ASC", "DESC")) {
+                var liste = lesen(admin.senden("GET", "/api/mitarbeiter?stichtag=2020-10-19&sortierung=" + spalte + "&richtung=" + richtung, null), 200);
+                assertThat(liste.get("mitarbeiter")).extracting(p -> p.get("id").asLong())
+                        .containsExactlyElementsOf((richtung.equals("ASC") ? List.of(wieder, andere) : List.of(andere, wieder))
+                                .stream().map(p -> p.get("id").asLong()).toList());
+            }
+        }
+        for (String spalte : List.of("geburtsdatum", "austrittsdatum")) {
+            for (String richtung : List.of("ASC", "DESC")) {
+                var liste = lesen(admin.senden("GET", "/api/mitarbeiter?stichtag=2026-10-19&sortierung=" + spalte + "&richtung=" + richtung, null), 200);
+                assertThat(liste.get("mitarbeiter")).extracting(p -> p.get("id").asLong())
+                        .containsExactly(andere.get("id").asLong(), wieder.get("id").asLong());
+            }
+        }
+    }
+
     @Test void organisationenEindeutigZuordnenUmbenennenUndSchuetzen() throws Exception {
         org("İ".repeat(120));
         long id = org("  Verwaltung  ");

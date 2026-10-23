@@ -89,7 +89,7 @@
       </select></label>
       <label class="field">Stichtag<input id="stichtag" type="date" min="0001-01-01" max="9999-12-31" required [(ngModel)]="stichtag" (ngModelChange)="filterAendern()"></label>
       <label class="field">Sortieren nach<select id="sortierung" [(ngModel)]="sortierung" (ngModelChange)="filterAendern()">
-        <option value="nachname">Nachname</option><option value="personalnummer">Personalnummer</option><option value="eintrittsdatum">Eintrittsdatum</option><option value="organisationseinheit">Organisationseinheit</option><option value="wochenstunden">Wochenstunden</option>
+        @for (spalte of sortierSpalten; track spalte.wert) { <option [value]="spalte.wert">{{ spalte.titel }}</option> }
       </select></label>
       <label class="field">Reihenfolge<select id="richtung" [(ngModel)]="richtung" (ngModelChange)="filterAendern()"><option value="ASC">Aufsteigend</option><option value="DESC">Absteigend</option></select></label>
       <button class="button secondary" (click)="zuruecksetzen()">Filter zurücksetzen</button>
@@ -100,9 +100,9 @@
     @if (laedt()) {
       <div class="loading" role="status">Mitarbeitende werden geladen …</div>
     }
-    @if (!laedt() && !ladefehler() && eintraege().length > 0) {
+    @if (!ladefehler() && eintraege().length > 0) {
       <p class="table-hint" id="tabellen-hinweis">
-        Weitere Spalten erreichen Sie durch horizontales Scrollen.
+        Spaltenüberschrift anklicken zum Sortieren; erneut klicken kehrt die Reihenfolge um. Weitere Spalten erreichen Sie durch horizontales Scrollen.
       </p>
       <div
         class="table-scroll"
@@ -117,20 +117,14 @@
           </caption>
           <thead>
             <tr>
-              <th scope="col">Personal-Nr.</th>
-              <th scope="col">Titel</th>
-              <th scope="col">Nachname</th>
-              <th scope="col">Vorname</th>
-              <th scope="col">Geburtsname</th>
-              <th scope="col">Kürzel</th>
-              <th scope="col">Geburtsdatum</th>
-              <th scope="col">Eintrittsdatum</th>
-              <th scope="col">Austrittsdatum</th>
-              <th scope="col">Org.-Einheit</th>
-              <th scope="col">Stelle</th>
-              <th scope="col">Beschäftigungsart / Beschäftigung</th>
-              <th scope="col">Abwesenheit am Stichtag</th>
-              <th scope="col">Wochenstunden</th>
+              @for (spalte of sortierSpalten; track spalte.wert) {
+                <th scope="col" [attr.aria-sort]="ariaSortierung(spalte.wert)">
+                  <button type="button" class="spalten-sortierung" (click)="spalteSortieren(spalte.wert)"
+                    [title]="spalte.titel + (sortierung === spalte.wert && richtung === 'ASC' ? ': absteigend sortieren' : ': aufsteigend sortieren')">
+                    {{ spalte.titel }} <span aria-hidden="true">{{ sortierung === spalte.wert ? (richtung === 'ASC' ? '↑' : '↓') : '↕' }}</span>
+                  </button>
+                </th>
+              }
               <th scope="col"><span class="sr-only">Aktionen</span></th>
             </tr>
           </thead>

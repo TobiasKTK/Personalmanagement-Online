@@ -15,6 +15,7 @@ public class PersonaldatenController {
     private final PersonaldatenService service;
     public PersonaldatenController(PersonaldatenService service) { this.service = service; }
     @GetMapping public Akte lesen(@PathVariable @Positive long person) { return service.lesen(person); }
+    @GetMapping("/stellenzuordnung") public StellenzuordnungStand stellenzuordnung(@PathVariable @Positive long person) { return service.stellenzuordnung(person); }
     @PutMapping public Akte speichern(@PathVariable @Positive long person, @RequestBody @Valid Daten e) { return service.speichern(person, e); }
     @GetMapping("/historie") public Historie historie(@PathVariable @Positive long person, @RequestParam(defaultValue="0") @Min(0) int seite) { return service.historie(person, seite); }
     @PostMapping("/beschaeftigungszeiten") @ResponseStatus(HttpStatus.CREATED)

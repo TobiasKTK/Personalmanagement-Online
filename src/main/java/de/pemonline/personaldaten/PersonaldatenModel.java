@@ -37,9 +37,12 @@ public final class PersonaldatenModel {
             @NotNull @Size(max=500) List<@NotNull @Valid Verguetung> verguetungen, @NotNull @PositiveOrZero Long version) {
         public Daten { austrittsgrund = text(austrittsgrund); }
         public Daten mitVersion(long v) { return new Daten(bank, profilId, disziplinarisch, fachlich, kostenstellen, vertretungen, schwerbehinderung, austrittsgrund, kuendigungsdatum, verguetungen, v); }
+        public Daten mitProfil(Long id) { return new Daten(bank, id, disziplinarisch, fachlich, kostenstellen, vertretungen, schwerbehinderung, austrittsgrund, kuendigungsdatum, verguetungen, version); }
         public Daten ohneAustritt() { return new Daten(bank, profilId, disziplinarisch, fachlich, kostenstellen, vertretungen, schwerbehinderung, "", null, verguetungen, version); }
         public static Daten leer() { return new Daten(new Bank("", "", "", ""), null, false, false, List.of(), List.of(), new Schwerbehinderung(null, false, "", "", null, null), "", null, List.of(), 0L); }
     }
+    public record Stellenzuordnung(@Positive Long profilId, @NotNull @PositiveOrZero Long version) {}
+    public record StellenzuordnungStand(Long profilId, long version, String freitext) {}
     public record Zeit(long id, LocalDate beginn, LocalDate ende, String austrittsgrund, LocalDate kuendigungsdatum) {}
     public record ZeitEingabe(@NotNull LocalDate beginn, @NotNull LocalDate ende, @Size(max=240) String austrittsgrund,
             LocalDate kuendigungsdatum, @NotNull @PositiveOrZero Long version) { public ZeitEingabe { austrittsgrund = text(austrittsgrund); } }

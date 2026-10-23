@@ -105,6 +105,10 @@ tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--surface-subtle); }
 .stammdaten-tabelle { min-width: 2200px; }
 .stammdaten-tabelle th { position: sticky; top: 0; z-index: 2; }
+.stammdaten-tabelle th:has(.spalten-sortierung) { padding-block: 0; }
+.spalten-sortierung { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: var(--space-2) 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.spalten-sortierung:hover, th[aria-sort] .spalten-sortierung { color: var(--primary); }
+.spalten-sortierung:hover { text-decoration: underline; }
 .stammdaten-tabelle td { max-width: 230px; white-space: normal; overflow-wrap: anywhere; line-height: 1.6; }
 .stammdaten-tabelle :is(th, td):first-child { position: sticky; left: 0; background: var(--surface-subtle); z-index: 1; min-width: 115px; box-shadow: 1px 0 var(--line); }
 .stammdaten-tabelle :is(th, td):last-child { position: sticky; right: 0; background: var(--surface); z-index: 1; box-shadow: -1px 0 var(--line); }
