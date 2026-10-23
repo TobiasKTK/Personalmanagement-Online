@@ -59,7 +59,7 @@
           </fieldset></form>
           <h3>Organisationseinheit und Arbeitszeit</h3>
           <p>{{ a.person.organisationseinheit || 'Keine Organisationseinheit' }} · {{ a.person.wochenstunden }} Wochenstunden</p>
-          <app-historie [person]="person().id" (geaendert)="organisationGeaendert()" (arbeitetGeaendert)="kindArbeitet.set($event)" />
+          <app-historie [person]="person().id" [datumFokussieren]="organisationswechsel()" (geaendert)="organisationGeaendert()" (arbeitetGeaendert)="kindArbeitet.set($event)" />
           <h3>Planstellen</h3>
           <p class="section-description">Bei Bedarf bestehende Planstellen besetzen. Stellenanteile sind Planungsgrößen und ändern die Wochenstunden oder Organisationseinheit nicht automatisch.</p>
           <ul class="management-list">@for (p of zugeordnetePlanstellen(); track p.id) { <li><span>{{ p.bezeichnung }} · {{ profilName(p.profilId) }} · {{ organisationsName(p.organisationId) }} · {{ p.anteil * 100 | number:'1.0-2' }} %</span><button class="button secondary compact" (click)="planstelleFreigeben(p)" [disabled]="arbeitet()">Besetzung aufheben</button></li> } @empty { <li>Keine Planstelle zugewiesen.</li> }</ul>

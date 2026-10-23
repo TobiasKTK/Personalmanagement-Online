@@ -25,6 +25,7 @@ export class PersonaldatenComponent implements AfterViewInit {
   private readonly http = inject(HttpClient);
   readonly person = input.required<Mitarbeiter>();
   readonly neuanlage = input(false);
+  readonly organisationswechsel = input(false);
   readonly fristBereich = input('');
   readonly fristDatensatz = input('');
   readonly geschlossen = output<void>();
@@ -56,6 +57,9 @@ export class PersonaldatenComponent implements AfterViewInit {
   private fokus: HTMLElement | null = null;
   ngAfterViewInit(): void {
     this.fokus = document.activeElement as HTMLElement; this.dialog.nativeElement.showModal();
+    if (this.organisationswechsel()) {
+      this.bereich = 'Organisation'; this.organisationBesucht = true;
+    }
     if (['vollmachten', 'beauftragungen', 'fortbildungen'].includes(this.fristBereich())) {
       this.bereich = 'Ergänzungen'; this.erweiterungenBesucht = true;
     }

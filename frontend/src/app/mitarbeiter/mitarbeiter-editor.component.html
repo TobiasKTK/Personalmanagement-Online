@@ -181,8 +181,9 @@
           }}</span></label
         >
         <label class="field" for="wochenstunden"
-          >Wochenstunden *<input
+          >Wochenstunden{{ person() ? '' : ' *' }}<input
             id="wochenstunden"
+            [readOnly]="!!person()"
             formControlName="wochenstunden"
             [attr.aria-invalid]="feldFehler('wochenstunden') ? true : null"
             type="number"
@@ -202,12 +203,22 @@
       <legend>Organisation und Status</legend>
       <div class="form-grid stammdaten-grid">
         <label class="field" for="organisationseinheit">Org.-Einheit
+          @if (person(); as p) {
+            <input id="organisationseinheit" [value]="p.organisationseinheit || 'Keine Zuordnung'" readonly aria-describedby="organisationswechsel-hinweis">
+          } @else {
           <select id="organisationseinheit" formControlName="organisationseinheitId" aria-describedby="organisationseinheit-fehler">
             <option [ngValue]="null">Keine Zuordnung</option>
             @for (o of organisationen(); track o.id) { <option [ngValue]="o.id">{{ o.name }}</option> }
           </select>
           <span class="field-error" id="organisationseinheit-fehler">{{ feldFehler('organisationseinheitId') }}</span>
+          }
         </label>
+        @if (person()) {
+          <div class="field">
+            <p class="field-help" id="organisationswechsel-hinweis">Organisationseinheit und Wochenstunden zeigen den aktuellen Stand. Änderungen erfassen Sie mit einem Gültigkeitsdatum.</p>
+            <button type="button" class="button secondary" (click)="organisationswechsel()" [disabled]="speichert() || !profileGeladen()">Organisation / Arbeitszeit ändern</button>
+          </div>
+        }
         <div class="field">
           <label for="stellenprofil">Stelle (Stellenprofil)</label>
           <select id="stellenprofil" formControlName="profilId" aria-describedby="stellenprofil-hinweis">

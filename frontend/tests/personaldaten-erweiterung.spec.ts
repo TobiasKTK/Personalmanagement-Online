@@ -96,7 +96,14 @@ test('Ungespeicherte Angaben überleben Bereichswechsel, Basisänderung, Konflik
   await dialog.getByRole('button', { name: 'Stammdaten', exact: true }).click();
   await dialog.getByRole('button', { name: 'Ergänzungen', exact: true }).click();
   await expect(kontakte.getByLabel('Kontaktperson / Bezeichnung')).toHaveValue('Mein Entwurf');
-  page.once('dialog', d => d.dismiss()); await page.keyboard.press('Escape');
+  // Der Bereichswechsel lädt die FTE-Werte. Währenddessen ist Schließen gesperrt.
+  // Erst danach Escape senden und die Rückfrage vollständig beantworten, damit
+  // kein unbenutzter Listener den späteren Neu-laden-Dialog verwirft.
+  await expect(dialog.getByRole('button', { name: 'Schließen', exact: true })).toBeEnabled();
+  await Promise.all([
+    page.waitForEvent('dialog').then(d => d.dismiss()),
+    page.keyboard.press('Escape'),
+  ]);
   await expect(dialog).toBeVisible();
   await dialog.getByText('Vollzeitbasis der Firma ändern', { exact: true }).click();
   await dialog.getByLabel('Vollzeit-Wochenstunden').fill('40');
@@ -114,7 +121,10 @@ test('Ungespeicherte Angaben überleben Bereichswechsel, Basisänderung, Konflik
   await expect(dialog.getByRole('alert')).toContainText('Server ist nicht erreichbar');
   await expect(kontakte.getByLabel('Kontaktperson / Bezeichnung')).toHaveValue('Mein Entwurf');
   await page.unroute('**/personaldaten/erweiterungen');
-  page.once('dialog', d => d.accept()); await dialog.getByRole('button', { name: 'Ergänzungen neu laden', exact: true }).click();
+  await Promise.all([
+    page.waitForEvent('dialog').then(d => d.accept()),
+    dialog.getByRole('button', { name: 'Ergänzungen neu laden', exact: true }).click(),
+  ]);
   await expect(kontakte.getByLabel('Kontaktperson / Bezeichnung')).toHaveValue('Anderer Stand');
 });
 

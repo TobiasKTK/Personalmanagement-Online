@@ -35,6 +35,7 @@ export class TeamComponent implements OnInit {
   @ViewChild(MitarbeiterDetailsComponent) private profil?: MitarbeiterDetailsComponent;
   @ViewChild(PersonaldatenComponent) private personaldatenDialog?: PersonaldatenComponent;
   readonly personaldaten = signal<Mitarbeiter | null>(null);
+  readonly organisationswechsel = signal(false);
   readonly neuanlage = signal<number | null>(null);
   readonly fristZiel = signal({ bereich: '', datensatz: '' });
 
@@ -118,6 +119,7 @@ export class TeamComponent implements OnInit {
   }
 
   async personaldatenSchliessen(id: number): Promise<void> {
+    this.organisationswechsel.set(false);
     this.neuanlage.set(null);
     this.personaldaten.set(null);
     this.fristZiel.set({ bereich: '', datensatz: '' });
@@ -267,6 +269,13 @@ export class TeamComponent implements OnInit {
     this.neuanlage.set(person.id);
     this.fristZiel.set({ bereich: '', datensatz: '' });
     this.details.set(person);
+    this.personaldaten.set(person);
+  }
+
+  organisationAendern(person: Mitarbeiter): void {
+    this.editorGeoeffnet.set(false);
+    if (this.details()?.id === person.id) this.details.set(person);
+    this.organisationswechsel.set(true);
     this.personaldaten.set(person);
   }
 

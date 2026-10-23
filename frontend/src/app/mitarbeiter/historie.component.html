@@ -5,7 +5,7 @@
   @if (meldung()) { <p role="status">{{ meldung() }}</p> }
   <button class="button secondary compact" (click)="laden()" [disabled]="arbeitet()">Historie aktualisieren</button>
   <form (ngSubmit)="speichern()"><fieldset [disabled]="arbeitet() || !geladen()"><legend>{{ bearbeitet ? 'Stand korrigieren' : 'Neuer Stand' }}</legend><div class="filter-grid">
-    <label class="field">Gültig ab<input name="gueltigAb" type="date" min="0001-01-01" max="9999-12-31" [(ngModel)]="eingabe.gueltigAb" required></label>
+    <label class="field">Gültig ab<input #gueltigAb name="gueltigAb" type="date" min="0001-01-01" max="9999-12-31" [(ngModel)]="eingabe.gueltigAb" required></label>
     <label class="field">Organisationseinheit<select name="historieOrganisation" [(ngModel)]="eingabe.organisationseinheitId"><option [ngValue]="null">Keine Zuordnung</option>@for (o of organisationen(); track o.id) { <option [ngValue]="o.id">{{ o.name }}</option> }</select></label>
     <label class="field">Wochenstunden<input name="historieStunden" type="number" min="0.5" max="168" step="0.01" [(ngModel)]="eingabe.wochenstunden" required></label>
     <button class="button primary">Historischen Stand speichern</button>@if (bearbeitet) { <button type="button" class="button secondary" (click)="bearbeiten()">Korrektur abbrechen</button> }

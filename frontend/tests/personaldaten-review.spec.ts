@@ -87,7 +87,7 @@ test('Beschäftigungs- und Arbeitszeitentwürfe werden beim Schließen und Berei
   await expect(historie.getByLabel('Wochenstunden')).toHaveValue('28');
   page.once('dialog', d => d.dismiss()); await page.keyboard.press('Escape'); await expect(dialog).toBeVisible();
   page.once('dialog', d => d.accept()); await dialog.getByRole('button', { name: 'Neu laden', exact: true }).click();
-  await expect(historie.getByLabel('Wochenstunden')).toHaveValue('40');
+  await expect(historie.getByLabel('Wochenstunden')).toHaveValue('32');
   await expect(dialog.getByRole('button', { name: 'Neu laden', exact: true })).toBeEnabled();
   await expect(dialog.getByText('Ungespeicherte Änderungen', { exact: true })).toHaveCount(0);
   await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible();

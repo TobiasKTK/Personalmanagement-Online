@@ -223,6 +223,7 @@
     [organisationen]="organisationen()"
     (gespeichert)="gespeichert($event)"
     (ergaenzen)="anlageFortsetzen($event)"
+    (organisationAendern)="organisationAendern($event)"
     (geschlossen)="editorGeoeffnet.set(false)"
   />
 }
@@ -230,7 +231,7 @@
   <app-mitarbeiter-details [person]="person" [darfSchreiben]="darfSchreiben()" (stammdatenBearbeiten)="oeffnen(person)" (personalakteOeffnen)="personaldaten.set(person)" (geschlossen)="profilSchliessen(person.id)" />
 }
 @if (personaldaten(); as person) {
-  <app-personaldaten [person]="person" [neuanlage]="neuanlage() === person.id" [fristBereich]="fristZiel().bereich" [fristDatensatz]="fristZiel().datensatz" (geschlossen)="personaldatenSchliessen(person.id)" />
+  <app-personaldaten [person]="person" [organisationswechsel]="organisationswechsel()" [neuanlage]="neuanlage() === person.id" [fristBereich]="fristZiel().bereich" [fristDatensatz]="fristZiel().datensatz" (geschlossen)="personaldatenSchliessen(person.id)" />
 }
 <dialog
   #loeschdialog

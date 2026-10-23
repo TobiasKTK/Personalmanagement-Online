@@ -21,11 +21,13 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
   private anfang!: ReturnType<typeof this.formular.getRawValue>;
   private vorgeschlageneNummer: number | null = null;
   private navigationEntscheiden?: (verlassen: boolean) => void;
+  private wechselOeffnen = false;
 
   readonly person = input<Mitarbeiter | null>(null);
   readonly organisationen = input<Organisation[]>([]);
   readonly gespeichert = output<Mitarbeiter>();
   readonly ergaenzen = output<Mitarbeiter>();
+  readonly organisationAendern = output<Mitarbeiter>();
   readonly geschlossen = output<void>();
   readonly speichert = signal(false);
   readonly profile = signal<Profil[]>([]);
@@ -127,6 +129,13 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
     }
   }
 
+  organisationswechsel(): void {
+    if (!this.person() || this.speichert()) return;
+    this.wechselOeffnen = true;
+    if (this.hatAenderungen()) this.bestaetigung.nativeElement.showModal();
+    else this.verwerfen();
+  }
+
   verlassenErlauben(): boolean | Promise<boolean> {
     if (this.speichert()) return false;
     if (!this.hatAenderungen()) return true;
@@ -159,6 +168,7 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
 
   weiterBearbeiten(event?: Event): void {
     event?.preventDefault();
+    this.wechselOeffnen = false;
     this.bestaetigung.nativeElement.close();
     this.navigationAbschliessen(false);
   }
@@ -167,7 +177,8 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
     this.bestaetigung.nativeElement.close();
     this.editor.nativeElement.close();
     this.navigationAbschliessen(true);
-    this.geschlossen.emit();
+    if (this.wechselOeffnen && this.person()) this.organisationAendern.emit(this.person()!);
+    else this.geschlossen.emit();
   }
 
   vorSchliessenSpeichern(): void {
@@ -178,6 +189,7 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
 
   async speichern(weitereDaten = false): Promise<void> {
     if (this.speichert() || !this.profileGeladen()) {
+      this.wechselOeffnen = false;
       this.navigationAbschliessen(false);
       return;
     }
@@ -185,6 +197,7 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
     this.feldfehler.set({});
     this.formular.markAllAsTouched();
     if (!this.formularElement.nativeElement.reportValidity() || this.formular.invalid) {
+      this.wechselOeffnen = false;
       this.formularElement.nativeElement.querySelector<HTMLInputElement>('.ng-invalid')?.focus();
       this.navigationAbschliessen(false);
       return;
@@ -216,9 +229,11 @@ export class MitarbeiterEditorComponent implements OnInit, AfterViewInit {
       const gespeichert = await firstValueFrom(this.api.speichern(eingabe, person?.id));
       this.editor.nativeElement.close();
       this.navigationAbschliessen(true);
-      if (weitereDaten && !person) this.ergaenzen.emit(gespeichert);
+      if (this.wechselOeffnen) this.organisationAendern.emit(gespeichert);
+      else if (weitereDaten && !person) this.ergaenzen.emit(gespeichert);
       else this.gespeichert.emit(gespeichert);
     } catch (fehler) {
+      this.wechselOeffnen = false;
       this.fehler.set(fehler instanceof Error ? fehler.message : 'Speichern fehlgeschlagen.');
       if (fehler instanceof ApiFehler) this.feldfehler.set(fehler.felder);
       this.navigationAbschliessen(false);

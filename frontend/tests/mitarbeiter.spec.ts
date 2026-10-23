@@ -81,15 +81,23 @@ test('alle Stammdaten anlegen, bearbeiten, dauerhaft laden und löschen', async 
   await expect(page.locator('#anzahl')).toHaveText('0');
 });
 
-test('Eintritt und Stunden eines künftigen Mitarbeiters gemeinsam korrigieren', async ({ page, request }) => {
+test('Eintritt eines künftigen Mitarbeiters speichern und Arbeitszeit im Verlauf korrigieren', async ({ page, request }) => {
   const person = await anlegen(request, { eintrittsdatum: '2035-03-01', wochenstunden: 40 });
   await page.goto('/mitarbeiter');
   await page.getByRole('button', { name: 'Anna Müller Mitarbeiter öffnen' }).click();
   await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();
   await page.locator('#eintrittsdatum').fill('2035-04-01');
-  await page.locator('#wochenstunden').fill('20');
-  await page.locator('#speichern').click();
+  await page.getByRole('button', { name: 'Organisation / Arbeitszeit ändern', exact: true }).click();
+  await page.locator('#ungespeichert-dialog').getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(page.locator('#editor')).toHaveCount(0);
+  const akte = page.getByRole('dialog', { name: /^Personaldaten ·/ });
+  const historie = akte.getByRole('region', { name: 'Abteilungs- und Arbeitszeitverlauf' });
+  await historie.getByRole('button', { name: 'Stand korrigieren', exact: true }).click();
+  await expect(historie.getByLabel('Gültig ab')).toHaveValue('2035-04-01');
+  await historie.getByLabel('Wochenstunden').fill('20');
+  await historie.getByRole('button', { name: 'Historischen Stand speichern' }).click();
+  await expect(historie.getByRole('status')).toHaveText('Historischer Stand gespeichert.');
+  await akte.getByRole('button', { name: 'Schließen', exact: true }).click();
   await page.reload();
   await page.getByRole('button', { name: 'Anna Müller Mitarbeiter öffnen' }).click();
   await page.getByRole('button', { name: 'Stammdaten bearbeiten', exact: true }).click();

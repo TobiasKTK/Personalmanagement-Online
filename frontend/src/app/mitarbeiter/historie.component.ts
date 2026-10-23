@@ -1,15 +1,20 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, ElementRef, Injector, OnInit, ViewChild, afterNextRender, inject, input, output, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { mitFehlern, ApiFehler } from '../shared/api-fehler';
-import { Organisation, heutigesDatum } from '../shared/model';
+import { Mitarbeiter, Organisation, heutigesDatum } from '../shared/model';
 interface Historie { id: number; gueltigAb: string; organisationseinheitId: number | null; organisationseinheit: string; wochenstunden: number; version: number; }
 @Component({ selector: 'app-historie', standalone: true, imports: [FormsModule, DatePipe], templateUrl: './historie.component.html' })
 export class HistorieComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly injector = inject(Injector);
+  private aktuellerStand: Mitarbeiter | null = null;
+  private datumFokussiert = false;
+  @ViewChild('gueltigAb') private gueltigAb?: ElementRef<HTMLInputElement>;
   readonly person = input.required<number>();
+  readonly datumFokussieren = input(false);
   readonly geaendert = output<void>();
   readonly arbeitetGeaendert = output<boolean>();
   readonly eintraege = signal<Historie[]>([]);
@@ -26,13 +31,30 @@ export class HistorieComponent implements OnInit {
   private entwurfOriginal = JSON.stringify(this.eingabe);
   entwurfGeaendert(): boolean { return JSON.stringify(this.eingabe) !== this.entwurfOriginal; }
   ngOnInit(): void { void this.laden(); }
-  bearbeiten(h?: Historie): void { this.bearbeitet = h ?? null; this.eingabe = h ? { gueltigAb: h.gueltigAb, organisationseinheitId: h.organisationseinheitId, wochenstunden: h.wochenstunden } : { gueltigAb: heutigesDatum(), organisationseinheitId: null, wochenstunden: 40 }; this.entwurfOriginal = JSON.stringify(this.eingabe); }
-  async laden(): Promise<void> { await this.ausfuehren(() => this.datenLaden()); }
+  bearbeiten(h?: Historie): void {
+    this.bearbeitet = h ?? null;
+    this.eingabe = h ? { gueltigAb: h.gueltigAb, organisationseinheitId: h.organisationseinheitId, wochenstunden: h.wochenstunden }
+      : { gueltigAb: heutigesDatum(), organisationseinheitId: this.aktuellerStand?.organisationseinheitId ?? null, wochenstunden: this.aktuellerStand?.wochenstunden ?? 40 };
+    this.entwurfOriginal = JSON.stringify(this.eingabe);
+  }
+  async laden(): Promise<void> {
+    await this.ausfuehren(() => this.datenLaden());
+    if (this.geladen() && this.datumFokussieren() && !this.datumFokussiert) {
+      this.datumFokussiert = true;
+      afterNextRender(() => this.gueltigAb?.nativeElement.focus(), { injector: this.injector });
+    }
+  }
   private async datenLaden(): Promise<void> {
-    const [h, org] = await Promise.all([
+    const [h, org, person] = await Promise.all([
       firstValueFrom(mitFehlern(this.http.get<{ eintraege: Historie[]; gesamt: number; mitarbeiterVersion: number }>(this.pfad(), { params: { seite: this.seite } }))),
       firstValueFrom(mitFehlern(this.http.get<Organisation[]>('/api/organisationseinheiten'))),
+      firstValueFrom(mitFehlern(this.http.get<Mitarbeiter>(`/api/mitarbeiter/${this.person()}`))),
     ]);
+    if (person.version !== h.mitarbeiterVersion) {
+      throw new Error('Der Mitarbeiter wurde während des Ladens geändert. Bitte die Historie aktualisieren.');
+    }
+    this.aktuellerStand = person;
+    if (!this.bearbeitet && !this.entwurfGeaendert()) this.bearbeiten();
     this.eintraege.set(h.eintraege); this.gesamt.set(h.gesamt); this.mitarbeiterVersion = h.mitarbeiterVersion; this.organisationen.set(org); this.geladen.set(true);
     if (!h.eintraege.length && this.seite > 0) { this.seite--; await this.datenLaden(); }
   }
